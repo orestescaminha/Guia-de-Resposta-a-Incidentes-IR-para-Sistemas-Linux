@@ -176,13 +176,13 @@ cp /proc/<PID>/exe /path/to/evidence/recovered_binary.bin # Copia o executável 
 >_Mesmo se o invasor tiver deletado o binário do disco rígido, a imagem do executável permanece acessível através do ponteiro `/proc/<PID>/exe`. Esse código recupera a evidência intacta para posterior engenharia reversa ou submissão ao VirusTotal/YARA._
 #### O que verificar em `/proc/[PID]/`
 
-🔹 /proc/[PID]/exe: Mostra o link simbólico para o caminho executável real. Se o binário foi apagado do disco pelo atacante enquanto ainda executava, ele exibirá o sufixo (deleted). Você pode copiar esse arquivo para recuperar o binário original
+🔹 `/proc/[PID]/exe`: Mostra o link simbólico para o caminho executável real. Se o binário foi apagado do disco pelo atacante enquanto ainda executava, ele exibirá o sufixo (deleted). Você pode copiar esse arquivo para recuperar o binário original
 
-🔹 /proc/[PID]/cmdline: Contém a linha de comando completa com os argumentos passados para o processo. Diferente do comando `ps`, o conteúdo aqui não é truncado.
+🔹 `/proc/[PID]/cmdline`: Contém a linha de comando completa com os argumentos passados para o processo. Diferente do comando `ps`, o conteúdo aqui não é truncado.
 
-🔹 /proc/[PID]/fd/: Diretório com os descritores de arquivos abertos. Permite identificar conexões de rede ativas (sockets) e arquivos manipulados pelo processo.
+🔹 `/proc/[PID]/fd/`: Diretório com os descritores de arquivos abertos. Permite identificar conexões de rede ativas (sockets) e arquivos manipulados pelo processo.
 
-🔹 Cadeia de execução: Analise o processo pai (PPID), as variáveis de ambiente (/proc/[PID]/environ) e a hora de início para alinhar o processo à janela de tempo do incidente.
+🔹 Cadeia de execução: Analise o processo pai (PPID), as variáveis de ambiente (`/proc/[PID]/environ`) e a hora de início para alinhar o processo à janela de tempo do incidente.
 
 ### Padrões Suspeitos (Indicadores de Comprometimento)
 

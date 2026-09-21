@@ -89,7 +89,7 @@ script -a /mnt/evidence/session.log # registra tudo o que você faz no arquivo s
 ```
 ### Exemplo de Caso
 Um respondente digita 'reboot' em um host suspeito de mineração de criptomoedas para limpá-lo. O payload somente em memória, seu socket C2 e o binário excluído, mas em execução, desaparecem, não deixando nenhuma evidência do vetor de entrada.
-### Erros Críticos a Evitar
+### Erros Comuns a Evitar
 
  ⏻ Reiniciar ou desligar o sistema antes de realizar a captura da memória RAM (isso apaga payloads em memória e sockets ativos).
 
@@ -143,7 +143,7 @@ vol3 -f mem.lime linux.pslist / linux.bash / linux.malfind # Executa o Volatilit
 ### Exemplo de Caso
 Um host não mostra nada de incomum no disco. O malfind do Volatility na imagem de memória revela uma região injetada em um processo legítimo, e o bash do Linux recupera os comandos digitados pelo atacante literalmente.
 > O malfind é um dos plugins mais importantes e utilizados do Volatility para a detecção de malwares e injeção de código em imagens de memória RAM.
-### Erros Críticos a Evitar
+### Erros Comuns a Evitar
 🔹 Negligência: Ignorar a coleta de memória achando que a imagem de disco é suficiente.
 
 🔹 Poluição de provas: Gravar o arquivo de saída (dump) dentro do próprio host afetado.
@@ -174,29 +174,29 @@ ls -al /proc/<PID>/fd # Lista todos os descritores de arquivos (file descriptors
 cp /proc/<PID>/exe /path/to/evidence/recovered_binary.bin # Copia o executável do processo direto da memória e o salva como um arquivo binário em um local seguro.
 ```
 >_Mesmo se o invasor tiver deletado o binário do disco rígido, a imagem do executável permanece acessível através do ponteiro `/proc/<PID>/exe`. Esse código recupera a evidência intacta para posterior engenharia reversa ou submissão ao VirusTotal/YARA._
-#### O que verificar em `/proc/[pid]/`
+#### O que verificar em `/proc/[PID]/`
 
-🔹 /proc/[pid]/exe: Mostra o link simbólico para o caminho executável real. Se o binário foi apagado do disco pelo atacante enquanto ainda executava, ele exibirá o sufixo (deleted). Você pode copiar esse arquivo para recuperar o binário original
+🔹 /proc/[PID]/exe: Mostra o link simbólico para o caminho executável real. Se o binário foi apagado do disco pelo atacante enquanto ainda executava, ele exibirá o sufixo (deleted). Você pode copiar esse arquivo para recuperar o binário original
 
-🔹 /proc/[pid]/cmdline: Contém a linha de comando completa com os argumentos passados para o processo. Diferente do comando ps, o conteúdo aqui não é truncado.
+🔹 /proc/[PID]/cmdline: Contém a linha de comando completa com os argumentos passados para o processo. Diferente do comando `ps`, o conteúdo aqui não é truncado.
 
-🔹 /proc/[pid]/fd/: Diretório com os descritores de arquivos abertos. Permite identificar conexões de rede ativas (sockets) e arquivos manipulados pelo processo.
+🔹 /proc/[PID]/fd/: Diretório com os descritores de arquivos abertos. Permite identificar conexões de rede ativas (sockets) e arquivos manipulados pelo processo.
 
-🔹 Cadeia de execução: Analise o processo pai (PPID), as variáveis de ambiente (/proc/[pid]/environ) e a hora de início para alinhar o processo à janela de tempo do incidente.
+🔹 Cadeia de execução: Analise o processo pai (PPID), as variáveis de ambiente (/proc/[PID]/environ) e a hora de início para alinhar o processo à janela de tempo do incidente.
 
 ### Padrões Suspeitos (Indicadores de Comprometimento)
 
-🔹 Diretórios temporários: Processos rodando a partir de /tmp, /dev/shm ou /var/tmp.
+🔹 Diretórios temporários: Processos rodando a partir de `/tmp`, `/dev/shm` ou `/var/tmp`.
 
 🔹 Binários excluídos: Processos rodando a partir de um inode deletado (técnica clássica de fileless malware).
 
-🔹 Falsa identidade: Processos com nomes disfarçados de threads do kernel (ex: entre colchetes como [kworker/0:1]), mas que possuem um caminho executável real associado no /proc.
+🔹 Falsa identidade: Processos com nomes disfarçados de threads do kernel (ex: entre colchetes como [kworker/0:1]), mas que possuem um caminho executável real associado no `/proc`.
 
-🔹 Anomalia de privilégios/função: Servidores web (ex: Apache, Nginx) ou bancos de dados gerando processos filhos que são shells (sh, bash).
+🔹 Anomalia de privilégios/função: Servidores web (ex: Apache, Nginx) ou bancos de dados gerando processos filhos que são shells (`sh`, `bash`).
 
 ### Exemplo de Caso
 Comparar a saída do `ps` com uma listagem de diretório de `/proc` revela um PID visível em `/proc`, mas oculto do `ps`, que é a assinatura de um rootkit de espaço do usuário interceptando a listagem de processos.
-### Erros Críticos a Evitar
+### Erros Comuns a Evitar
 
 🔹 Confiar cegamente em ferramentas nativas como `ps`, `top` ou `netstat` em um sistema potencialmente sob efeito de um rootkit.
 
@@ -204,9 +204,78 @@ Comparar a saída do `ps` com uma listagem de diretório de `/proc` revela um PI
 
 🔹 Negligenciar diretórios baseados em memória RAM (`/dev/shm` e `/run`), locais muito visados para ocultar payloads.
 
+
+
 🔹 Deixar de mapear a árvore genealógica completa do processo, prejudicando a reconstrução da linha do tempo do ataque.
 
+### Conclusão
+Leia `/proc` em vez de `ps`. Ele revela o caminho executável verdadeiro, recupera binários excluídos ainda em execução e expõe o que `ps` foi configurado para ocultar.
+Em sistemas suspeitos, consulte o diretório `/proc` diretamente. Se o comando `ps` omitir um PID que está listado dentro de `/proc`, você está lidando com um rootkit que intercepta e mascara as chamadas de listagem de processos.
+## 4. Estado da Rede
+>_COM QUEM ESTÁ SE COMUNICANDO_
+
+O estado da rede em tempo real vincula um processo suspeito a um destino externo, que geralmente é a rota mais rápida para confirmar a violação. Capture-o cedo, porque os sockets fecham, e correlacione o endereço do par com seus logs de saída para obter o quadro completo.
+
+```
+LISTAR SOCKETS -> MAPEAMENTO PARA PROCESSO -> VERIFICAR O PAR
+```
+
+>_OS SOCKETS MORREM RAPIDAMENTE: Um beacon que verifica a cada cinco minutos pode não mostrar nenhuma conexão no momento em que você verifica_
+
+### O que Coletar
+
+🔹 Todos os sockets em escuta e estabelecidos com seus respectivos PIDs
+
+🔹 Tabelas raw/proc/net como verificação cruzada com ferramentas interceptadas
+
+🔹 Regras de firewall atuais, já que os invasores costumam adicionar regras de permissão ou redirecionamento
+
+🔹 Cache ARP, tabela de roteamento e quaisquer interfaces de túnel inesperadas
+
+### Capturar Comexões e Proprietários
+As conexões de rede são efêmeras e os sockets fecham rápido, o que exige rapidez do analista para capturar a evidência antes que ela desapareça.
+O trecho de código baixo reúne comandos essenciais para auditoria e investigação de rede em tempo real em um servidor Linux. O objetivo é mapear conexões ativas, relacioná-las a processos, verificar a tabela bruta do kernel, checar o estado das interfaces física/virtuais e inspecionar as regras do firewall.
+```
+ss -antpu #todos os TCP/UDP, numérico, com o processo proprietário. Substitui o netstat
+lsof -i -n -P # Lista arquivos abertos (no Linux, sockets são tratados como arquivos). Verificação cruzada ss
+cat /proc/net/tcp /proc/net/tcp6 # É onde o kernel armazena o estado bruto das conexões. A "verdade fundamental".
+ip -s link # Mostra as interfaces de rede (para ver se há interfaces em modo promíscuo ou placas virtuais estranhas).
+iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de firewall (Netfilter/Nftables).
+```
+### Resumo da Estratégia de Análise
+
+| Camada de Análise | Comando | O que revela |
+| --- | --- | --- |
+| **Visão do Usuário** | `ss -antpu` | Conexões mapeadas para nomes de processos e PIDs. |
+| **Visão de Processo/Arquivo** | `lsof -i -n -P` | Descritores de arquivo de rede abertos por processos. |
+| **Visão Bruta do Kernel** | `cat /proc/net/tcp` | Estado real e inalterado da tabela de sockets no kernel. |
+| **Camada Física/Enlace** | `ip -s link` | Módulos promíscuos (*sniffers*) e interfaces suspeitas. |
+| **Filtragem de Tráfego** | `iptables-save` / `nft` | Redirecionamentos, NATs e exceções no firewall. |
+
+>_Os IPs e portas de `/proc/net/tcp` estão em hexadecimal, podem ser convertidos para formato legível_
+
+### Sinais de Alerta
+
+🔹 Portas Altas: Sockets abertos em portas incomuns associados a binários ocultos em `/tmp`, `/var/tmp` ou `/dev/shm`.
+
+🔹 Conexão de saída para um ASN de hospedagem ou VPS sem motivo comercial
+
+🔹 Cadência regular de beacon visível no proxy ou Netflow em vez de no host
+
+🔹 Novas regras de iptables ou uma interface de túnel que ninguém provisionou
+
+### Exemplo de Caso
+Uma única conexão estabelecida de um processo em execução a partir de `/dev/shm` para um endereço VPS confirma o caso. Os logs do proxy mostram o mesmo peer contatado a cada 300 segundos por onze dias.
+
+### Erros Comuns a Evitar
+
+🔹 Confiar apenas no estado do host para um beacon que está atualmente ocioso
+
+🔹 Usar netstat do host comprometido sem verificação cruzada
+
+🔹 Não capturar regras de firewall, entradas de permissão adicionadas pelo atacante ausentes
+
+🔹 Ignorar sockets de domínio UNIX usados ​​para C2 local entre processos
 
 ### Conclusão
-Leia `/proc` em vez de `ps`. Ele revela o caminho executável verdadeiro, recupera binários excluídos ainda em execução e expõe o que ps foi configurado para ocultar.
-Em sistemas suspeitos, consulte o diretório `/proc` diretamente. Se o comando `ps` omitir um PID que está listado dentro de `/proc`, você está lidando com um rootkit que intercepta e mascara as chamadas de listagem de processos.
+Capture sockets antecipadamente e mapeie-os para os processos proprietários, mas corrobore com telemetria de rede, pois um beacon ocioso não mostra nada no host.

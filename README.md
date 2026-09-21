@@ -252,7 +252,7 @@ iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de fir
 | **Camada Física/Enlace** | `ip -s link` | Módulos promíscuos (*sniffers*) e interfaces suspeitas. |
 | **Filtragem de Tráfego** | `iptables-save` / `nft` | Redirecionamentos, NATs e exceções no firewall. |
 
->_Os IPs e portas de `/proc/net/tcp` estão em hexadecimal, podem ser convertidos para formato legível_
+>_Os IPs e portas de `/proc/net/tcp` estão em hexadecimal e podem ser convertidos para formato legível_
 
 ### Sinais de Alerta
 

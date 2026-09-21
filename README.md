@@ -140,9 +140,32 @@ insmod lime.ko 'path="tcp:4444" format=lime' # Carrega o módulo do kernel do Li
 sha256sum mem.lime > mem.lime.sha256 # Calcula o valor hash do arquivo de memória extraído e o salva
 vol3 -f mem.lime linux.pslist / linux.bash / linux.malfind # Executa o Volatility 3 apontando para a imagem de memória capturada (mem.lime) executando plugins de investigação.
 ```
+---
+
+#### Detalhamento dos Componentes
+
+* **`mount`**: Comando utilitário no Linux usado para anexar o sistema de arquivos de um dispositivo (disco, pendrive, partição) à estrutura principal de diretórios do sistema.
+* **`-o ro`**: Flag de opções (`-o`). A opção **`ro`** significa ***read-only*** (somente leitura). Impede qualquer alteração, gravação ou exclusão de dados no dispositivo enquanto ele estiver montado.
+* **`/dev/sdX1`**: O arquivo de dispositivo representando a origem.
+* **`/dev/sdX`**: Um disco físico (onde o `X` é uma letra genérica como `a`, `b`, `c`).
+* **`1`**: A primeira partição daquele disco.
+* **`/mnt/tools`**: O ponto de montagem (*mount point*), que é o diretório de destino na árvore de arquivos do sistema onde o conteúdo da partição passará a ser acessível.
+* **`linux.malfind`**: O **`malfind`** é um dos plugins mais importantes e utilizados do **Volatility** para a detecção de **malwares e injeção de código** em imagens de memória RAM. Sua função principal é varrer o espaço de memória dos processos em busca de regiões de memória suspeitas que possam conter **código malicioso injetado** (como *DLL injection*, *shellcode* ou *process hollowing*).
+
+#### O que o `malfind` Exibe na Saída
+
+Para cada alerta encontrado, a ferramenta exibe:
+
+* **PID e Nome do Processo**: O processo que abriga a memória suspeita.
+* **Endereço de Memória e Tamanho**: A localização exata no espaço de endereçamento do processo.
+* **Cabeçalho/Dump em Hexadecimal (Hexdump)**: Os primeiros bytes da região apontada.
+* **Desmontagem (Assembly/Disassembly)**: As primeiras instruções em linguagem assembly encontradas naquela área (ex.: chamadas de sistema, *NOP sleds*, etc.).
+
+---
+
 ### Exemplo de Caso
 Um host não mostra nada de incomum no disco. O malfind do Volatility na imagem de memória revela uma região injetada em um processo legítimo, e o bash do Linux recupera os comandos digitados pelo atacante literalmente.
-> O malfind é um dos plugins mais importantes e utilizados do Volatility para a detecção de malwares e injeção de código em imagens de memória RAM.
+
 ### Erros Comuns a Evitar
 🔹 Negligência: Ignorar a coleta de memória achando que a imagem de disco é suficiente.
 

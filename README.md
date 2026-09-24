@@ -319,3 +319,127 @@ Capture sockets antecipadamente e mapeie-os para os processos proprietários, ma
 
 ---
 
+## Busca por Persistências
+
+>_DOZE LUGARES PARA PROCURAR_
+
+O Linux oferece um amplo menu de locais de persistência e a maioria dos respondentes verifica apenas dois. Trabalhe com uma lista escrita sempre, porque o invasor que deixou um cron job quase certamente também deixou uma chave SSH, uma unidade systemd ou uma modificação de perfil de shell.
+
+```
+VERIFIQUE TODOS -> TEMPORIZADORES CRON -> CHAVES SSH
+```
+
+❗ UM ÚNICO LOCAL NUNCA É APENAS UM: Invasores competentes instalam vários mecanismos. Encontrar um e pará-lo é como você é reinfectado.
+
+Um erro clássico de equipes de resposta a incidentes: encontrar um único mecanismo de persistência, removê-lo e achar que o problema está resolvido, quando na verdade os atacantes costumam espalhar múltiplos pontos de acesso para garantir o retorno. Preparei uma versão organizada dos comandos citados para você copiar e usar
+
+Abaixo estão **12 locais críticos de persistência** em ambientes Linux, organizados pelas principais técnicas empregadas por atacantes:
+
+---
+
+## **12 locais críticos de persistência**
+
+### **1. Agendadores de Tarefas (Cron Jobs)**
+
+* **`/etc/crontab` e `/etc/cron.*` (`cron.d`, `cron.daily`, `cron.hourly`, `cron.monthly`, `cron.weekly`)**: Arquivos de configuração global do cron do sistema.
+* **`/var/spool/cron/crontabs/`** *(ou `/var/spool/cron/` dependendo da distro)*: Diretórios que armazenam os *crontabs* individuais de cada usuário do sistema (incluindo `root`).
+
+### **2. Configurações e Chaves de Acesso SSH**
+
+* **`~/.ssh/authorized_keys` e `~/.ssh/authorized_keys2**`: Arquivos no diretório de cada usuário que armazenam chaves públicas autorizadas a realizar login sem senha via SSH.
+* **`/etc/ssh/sshd_config` e `/etc/ssh/sshd_config.d/**`: Arquivos de configuração do daemon SSH. Podem ser alterados para aceitar senhas mestras, desativar logs ou incluir opções de execução remota como `AuthorizedKeysCommand`.
+
+### **3. Serviços do Gerenciador de Inicialização (Systemd)**
+
+* **`/etc/systemd/system/` e `/lib/systemd/system/**`: Locais onde ficam os arquivos de unidade (`.service`, `.timer`, `.path`) criados ou modificados para executar binários maliciosos na inicialização ou em intervalos regulares.
+* **`~/.config/systemd/user/`**: Diretório onde o *systemd* permite que usuários comuns (sem privilégios de root) configurem e executem serviços persistentes específicos no escopo do usuário.
+
+### **4. Inicialização de Perfil de Shell**
+
+* **`/etc/profile`, `/etc/profile.d/`, `/etc/bash.bashrc` e `/etc/zsh/zshrc**`: Arquivos de inicialização global do shell. Qualquer script inserido aqui é executado sempre que qualquer usuário abre uma nova sessão de terminal.
+* **`~/.bashrc`, `~/.bash_profile`, `~/.profile`, `~/.zshrc**`: Arquivos de configuração de shell específicos do diretório pessoal de cada usuário (`/root/` ou `/home/<usuario>/`).
+
+### **5. Scripts de Inicialização Legados e Invocadores de Sistema**
+
+* **`/etc/rc.local`**: Arquivo de script executado ao final do processo de boot em sistemas com compatibilidade SysVinit/Systemd.
+* **`/etc/init.d/` e `/etc/rc*.d/**`: Scripts de inicialização legados (*SysVinit*) e links simbólicos associados aos *runlevels* do sistema.
+
+### **6. Módulos do Kernel e Injeções de Bibliotecas**
+
+* **`/etc/ld.so.preload`**: Arquivo de configuração que força o carregador do sistema a pré-carregar bibliotecas dinâmicas (`.so`) antes de qualquer outra. Bastante utilizado por *userland rootkits*.
+* **`/lib/modules/$(uname -r)/` e `/etc/modules-load.d/**`: Locais de armazenamento e carregamento automático de módulos do kernel (LKMs) durante a inicialização.
+
+---
+
+### **Resumo dos Locais para Triagem Rápida**
+
+| Categoria | Caminho do Sistema | Método de Verificação Rápida |
+| --- | --- | --- |
+| **Cron** | `/etc/cron*` e `/var/spool/cron/crontabs/*` | `crontab -l` e `cat /etc/crontab` |
+| **SSH** | `~/.ssh/authorized_keys` | `head -n 50 /home/*/.ssh/authorized_keys /root/.ssh/authorized_keys` |
+| **Systemd** | `/etc/systemd/system/` | `systemctl list-unit-files --state=enabled` |
+| **Shell** | `/etc/profile.d/*` e `~/.bashrc` | `debsums` / `rpm -Vc` ou inspeção por hashes |
+| **Biblioteca** | `/etc/ld.so.preload` | `cat /etc/ld.so.preload` (se existir, deve ser analisado com cuidado) |
+
+
+Abaixo, uma sequência de comandos em uma única linha (one-liner) desenvolvida para inspecionar e auditar rapidamente os 12 locais de persistência em um servidor Linux.
+
+---
+
+### Inspecionar e Auditar Rapidamente
+
+O comando usa um cabeçalho visual para separar cada seção e redireciona erros de permissão ou arquivos inexistentes (`2>/dev/null`):
+Para salvar todo o resultado em um arquivo com data para anexar ao relatório de triagem ou cadeia de custódia, adicionei `| tee audit_persistencia_$(date +%Y%m%d).log` ao final do comando:
+
+```bash
+sudo sh -c 'for d in "/etc/crontab /etc/cron* /var/spool/cron/crontabs/*" "/root/.ssh/authorized_keys /home/*/.ssh/authorized_keys /etc/ssh/sshd_config" "/etc/systemd/system/*.service /lib/systemd/system/*.service /home/*/.config/systemd/user/* /root/.config/systemd/user/*" "/etc/profile /etc/profile.d/* /etc/bash.bashrc /root/.bashrc /root/.bash_profile /home/*/.bashrc" "/etc/rc.local /etc/init.d/* /etc/rc*.d/*" "/etc/ld.so.preload /etc/modules-load.d/*"; do echo -e "\n=== AUDITANDO: $d ==="; ls -la $d 2>/dev/null; done' | tee audit_persistencia_$(date +%Y%m%d).log
+
+```
+
+---
+
+### **One-Liners Específicos para Auditoria Rápida de Conteúdo**
+
+Se além de listar a existência dos arquivos você quiser **visualizar o conteúdo útil** (desconsiderando linhas vazias ou comentários), utilize estes utilitários focados em cada categoria:
+
+#### **1. Tarefas Agendadas (Cron Jobs)**
+
+```bash
+echo "=== CRON JOBS ==="; cat /etc/crontab /etc/cron.*/* /var/spool/cron/crontabs/* 2>/dev/null | grep -v "^#" | grep -v "^$"
+
+```
+
+#### **2. Chaves SSH e Configuração**
+
+```bash
+echo "=== SSH KEYS ==="; head -n 100 /root/.ssh/authorized_keys /home/*/.ssh/authorized_keys 2>/dev/null
+
+```
+
+#### **3. Serviços Systemd Habilitados (Persistência no Boot)**
+
+```bash
+echo "=== SYSTEMD SERVICES ==="; systemctl list-unit-files --state=enabled 2>/dev/null | head -n 30
+
+```
+
+#### **4. Perfis de Shell (Injeção de Comandos)**
+
+```bash
+echo "=== SHELL PROFILES ==="; grep -v "^#" /etc/profile /etc/profile.d/* /etc/bash.bashrc /root/.bashrc /home/*/.bashrc 2>/dev/null | grep -v "^$"
+
+```
+
+#### **5. Preload de Bibliotecas (Rootkits em Userland)**
+
+```bash
+echo "=== PRELOAD ==="; [ -f /etc/ld.so.preload ] && cat /etc/ld.so.preload || echo "Nenhum ld.so.preload encontrado"
+
+```
+
+---
+
+### Automatizar o Monitoramento Contínuo
+
+Para automatizar o monitoramento contínuo dos 12 locais de persistência, a melhor abordagem é calcular e salvar o **hash SHA-256** do conteúdo dos arquivos e diretórios críticos em uma linha de base (*baseline*). Em execuções subsequentes, o script compara a baseline antiga com o estado atual e alerta se um arquivo foi **criado**, **modificado** ou **removido**.
+O script em Python 3 [monitor_persistencia.py](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/monitor_persistencia.py) é uma solução completa , pronta para produção e sem dependências externas.

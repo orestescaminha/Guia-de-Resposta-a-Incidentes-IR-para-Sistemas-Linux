@@ -1,5 +1,6 @@
-# Guia de Resposta a Incidentes (IR) para Sistemas Linux
->__Esse é guia prático um sobre forense computacional e resposta a incidentes (DFIR) em ambientes Linux.__
+# Guia de Resposta a Incidentes (DFIR) para Sistemas Linux
+
+>_Um guia prático um sobre forense digital e resposta a incidentes (DFIR) em ambientes Linux_
 
 A resposta a incidentes no Linux não se resume a encontrar e remover malware. Trata-se de coletar evidências na ordem correta antes que os artefatos voláteis desapareçam.
 Criei este Guia como uma referência para resposta em tempo real (*live-response*) e triagem de sistemas Linux comprometidos. O fluxo de trabalho começa com um princípio simples:
@@ -27,6 +28,9 @@ Esse guia aborda a investigação em 12 etapas:
 📦 **Containers e Nuvem** — investigar tanto o host quanto o plano de controle, preservando camadas graváveis ou snapshots antes que evidências efêmeras desapareçam.
 
 🗜️ **Análise de Exfiltração** — correlacionar artefatos de preparação (*staging*), arquivos compactados, tráfego de saída, histórico do shell e atividade na nuvem, distinguindo roubo de dados confirmado de provável.
+
+---
+
 ## 1. Os Primeiros Cinco Minutos
 >_NÃO DESTRUA AS EVIDÊNCIAS_
 
@@ -34,6 +38,8 @@ O primeiro respondente causa mais danos do que o atacante na maioria dos casos d
 ```
 NÃO REINICIE -> BINÁRIOS CONFIÁVEIS -> PRESERVE PRIMEIRO
 ```
+---
+
 ### Estratégia: Isolar vs. Observar
 🔹 Isolar a Rede: Faça isso imediatamente se houver destruição ativa de dados ou exfiltração em andamento.
 
@@ -89,7 +95,8 @@ script -a /mnt/evidence/session.log # registra tudo o que você faz no arquivo s
 ```
 ### Exemplo de Caso
 Um respondente digita 'reboot' em um host suspeito de mineração de criptomoedas para limpá-lo. O payload somente em memória, seu socket C2 e o binário excluído, mas em execução, desaparecem, não deixando nenhuma evidência do vetor de entrada.
-### Erros Comuns a Evitar
+
+### ❌ Erros Comuns a Evitar
 
  ⏻ Reiniciar ou desligar o sistema antes de realizar a captura da memória RAM (isso apaga payloads em memória e sockets ativos).
 
@@ -106,6 +113,9 @@ Um respondente digita 'reboot' em um host suspeito de mineração de criptomoeda
 📐Normas Técnicas: Alinhado com a RFC 3227 (Ordem de Volatilidade) e NIST SP 800-86 (Guia de Integração de Forense Digital na Resposta a Incidentes).
 ### Conclusão
 Não reinicie a máquina. Não confie nos binários locais. Grave seus passos, use ferramentas estáticas de fora e colete a memória RAM primeiro.
+
+---
+
 ## 2. Aquisição de Memória
 >_A CAMADA MAIS VOLÁTIL_
 
@@ -140,7 +150,6 @@ insmod lime.ko 'path="tcp:4444" format=lime' # Carrega o módulo do kernel do Li
 sha256sum mem.lime > mem.lime.sha256 # Calcula o valor hash do arquivo de memória extraído e o salva
 vol3 -f mem.lime linux.pslist / linux.bash / linux.malfind # Executa o Volatility 3 apontando para a imagem de memória capturada (mem.lime) executando plugins de investigação.
 ```
----
 
 #### Detalhamento dos Componentes
 
@@ -161,12 +170,11 @@ Para cada alerta encontrado, a ferramenta exibe:
 * **Cabeçalho/Dump em Hexadecimal (Hexdump)**: Os primeiros bytes da região apontada.
 * **Desmontagem (Assembly/Disassembly)**: As primeiras instruções em linguagem assembly encontradas naquela área (ex.: chamadas de sistema, *NOP sleds*, etc.).
 
----
-
 ### Exemplo de Caso
 Um host não mostra nada de incomum no disco. O malfind do Volatility na imagem de memória revela uma região injetada em um processo legítimo, e o bash do Linux recupera os comandos digitados pelo atacante literalmente.
 
-### Erros Comuns a Evitar
+### ❌ Erros Comuns a Evitar
+
 🔹 Negligência: Ignorar a coleta de memória achando que a imagem de disco é suficiente.
 
 🔹 Poluição de provas: Gravar o arquivo de saída (dump) dentro do próprio host afetado.
@@ -174,8 +182,12 @@ Um host não mostra nada de incomum no disco. O malfind do Volatility na imagem 
 🔹 Falta de documentação: Esquecer de registrar a versão do Kernel (essencial para criar perfis de análise no Volatility).
 
 🔹 Ordem errada: Capturar a memória após rodar dezenas de comandos de triagem, destruindo evidências voláteis.
+
 ### Conclusão
 Memória primeiro, sempre. Ela contém código injetado, binários deletados, mas em execução, e sockets ativos que nenhuma imagem de disco jamais conterá
+
+---
+
 ## 3. Processos e /proc
 >_CONFIE NO KERNEL, NÃO NO `ps`_
 
@@ -197,6 +209,7 @@ ls -al /proc/<PID>/fd # Lista todos os descritores de arquivos (file descriptors
 cp /proc/<PID>/exe /path/to/evidence/recovered_binary.bin # Copia o executável do processo direto da memória e o salva como um arquivo binário em um local seguro.
 ```
 >_Mesmo se o invasor tiver deletado o binário do disco rígido, a imagem do executável permanece acessível através do ponteiro `/proc/<PID>/exe`. Esse código recupera a evidência intacta para posterior engenharia reversa ou submissão ao VirusTotal/YARA._
+
 #### O que verificar em `/proc/[PID]/`
 
 🔹 `/proc/[PID]/exe`: Mostra o link simbólico para o caminho executável real. Se o binário foi apagado do disco pelo atacante enquanto ainda executava, ele exibirá o sufixo (deleted). Você pode copiar esse arquivo para recuperar o binário original
@@ -227,13 +240,14 @@ Comparar a saída do `ps` com uma listagem de diretório de `/proc` revela um PI
 
 🔹 Negligenciar diretórios baseados em memória RAM (`/dev/shm` e `/run`), locais muito visados para ocultar payloads.
 
-
-
 🔹 Deixar de mapear a árvore genealógica completa do processo, prejudicando a reconstrução da linha do tempo do ataque.
 
 ### Conclusão
 Leia `/proc` em vez de `ps`. Ele revela o caminho executável verdadeiro, recupera binários excluídos ainda em execução e expõe o que `ps` foi configurado para ocultar.
 Em sistemas suspeitos, consulte o diretório `/proc` diretamente. Se o comando `ps` omitir um PID que está listado dentro de `/proc`, você está lidando com um rootkit que intercepta e mascara as chamadas de listagem de processos.
+
+---
+
 ## 4. Estado da Rede
 >_COM QUEM ESTÁ SE COMUNICANDO_
 
@@ -290,7 +304,7 @@ iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de fir
 ### Exemplo de Caso
 Uma única conexão estabelecida de um processo em execução a partir de `/dev/shm` para um endereço VPS confirma o caso. Os logs do proxy mostram o mesmo peer contatado a cada 300 segundos por onze dias.
 
-### Erros Comuns a Evitar
+### ❌ Erros Comuns a Evitar
 
 🔹 Confiar apenas no estado do host para um beacon que está atualmente ocioso
 
@@ -302,3 +316,6 @@ Uma única conexão estabelecida de um processo em execução a partir de `/dev/
 
 ### Conclusão
 Capture sockets antecipadamente e mapeie-os para os processos proprietários, mas corrobore com telemetria de rede, pois um beacon ocioso não mostra nada no host.
+
+---
+

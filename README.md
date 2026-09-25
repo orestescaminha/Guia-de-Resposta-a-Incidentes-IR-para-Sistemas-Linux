@@ -7,7 +7,7 @@ Criei este Guia como uma referência para resposta em tempo real (*live-response
 ```
 Preservar → Coletar → Analisar → Linha do Tempo → Relatar.
 ```
-Esse guia aborda a investigação em 12 etapas:
+Esse guia aborda a investigação em 10 etapas:
 
 🔄 **Os Primeiros Cinco Minutos** — preservar evidências, usar binários confiáveis, gravar sua sessão e evitar reiniciar o sistema antes de coletar evidências voláteis.
 

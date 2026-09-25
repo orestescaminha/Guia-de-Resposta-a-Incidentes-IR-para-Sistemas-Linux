@@ -503,3 +503,119 @@ Para elevar esse processo a um nível profissional de resposta a incidentes, a c
 
 O script [coleta_auth.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/coleta_auth.sh) é uma versão melhorada que analisa tentativas de autenticação e eventos de elevação de privilégio, verifica a integridade dos logs binários e exibe logins e falhas recentes.
 
+## Histórico do Shell
+
+>_O QUE ELES DIGITARAM_
+
+Aqui, o foco principal é a análise de histórico de comandos (shell history) para rastrear ações de atacantes.
+O histórico do shell é o artefato de maior valor quando sobrevive, fornecendo os comandos exatos do atacante. Verifique cada usuário, procure os truques usados ​​para suprimi-lo e lembre-se de que o histórico não gravado ainda pode ser recuperado da memória.
+
+```
+ENCONTRAR HISTÓRICOS -> VERIFICAR TRUQUES -> TEMPO DE RECUPERAÇÃO
+```
+
+>❗ UM HISTÓRICO É FACILMENTE DERROTADO: Os atacantes desativam HISTFILE, o vinculam (_link simbólico_) ao `/dev/mull` ou simplesmente o excluem, portanto, a ausência não prova nada.
+
+### Comandos para Coletar e Avaiar o Histórico
+
+O fluxo de trabalho dos commandos abaixo, abrange os principais pontos de falha no rastreamento de histórico (arquivos no disco, tampering via links/tamanho zero, desativação de variáveis de ambiente e recuperação volátil da RAM).
+
+```Bash
+find /home /root -name "*_history" -exec ls -la {} \; # Encontrar Históricos de Comandos. Todos os usuários, todos os shells
+ls -la ~/.bash_history # size 0 ou -> /dev/null = tampering # the tell
+grep -rn 'HISTFILE\|HISTSIZE\|set +o history' /home /root/.*rc # tentativas de supressão
+vol3 -f mem.lime linux.bash # recuperar histórico não gravado # memória supera exclusão
+```
+
+A Bash acima merece uma explicação rápida:
+
+**Linha 1**: Encontrar Históricos de Comandos
+Mapea as ações de um invasor. O analista busca os arquivos onde o shell armazena os comandos digitados, como `.bash_history`, `.zsh_history` ou `.sh_history`, no diretório de cada usuário.
+
+**Linha 2**: Ocultação de rastros (tampering)
+Lista informações detalhadas (-l) e inclui arquivos ocultos (-a) sobre o arquivo `.bash_history` localizado no diretório pessoal do usuário (~).
+
+Os comentários `# size 0 ou -> /dev/null = tampering # the tell` explica o que procurar na saída do comando para identificar se o histórico de comandos foi adulterado:
+
+🔹 **size 0**: Se o arquivo existir mas tiver 0 bytes de tamanho, significa que o histórico foi apagado (ex.: usando cat /dev/null > ~/.bash_history ou truncate).
+
+🔹 **-> /dev/null**: Se a saída mostrar um link simbólico apontando para /dev/null (ex.: .bash_history -> /dev/null), significa que o invasor redirecionou permanentemente o histórico para um "buraco negro", impedindo que qualquer comando seja gravado.
+
+🔹 **= tampering**: Qualquer uma das duas situações acima indica adulteração/manipulação (tampering). Em auditoria de segurança, administradores normais não limpam ou desativam seus históricos de comandos sem um motivo explícito.
+
+🔹 **# the tell**: Termo em inglês vindo do pôquer ("o indício" ou "a pista"). Significa que essa anomalia é a evidência clara que denuncia que alguém tentou esconder as ações realizadas no sistema.
+
+**Linha 3**: Verificar Truques de Supressão (Antiforense)
+Atacantes frequentemente tentam evitar que seus comandos sejam salvos. Aqui, aponto duas formas de detectar isso:
+
+🔹 Modificações de configuração: Eles desativam as variáveis de ambiente ou reduzem seu tamanho para zero.
+
+🔹 Links para o limbo: Um truque comum é apontar o arquivo de histórico para `/dev/null`, fazendo com que todos os comandos digitados sejam descartados instantaneamente. Um arquivo com tamanho `0` ou linkado para o `/dev/null` é um forte indício de adulteração.
+
+**Linha 4**: Recuperação via Memória (RAM)
+Se o atacante deletou o arquivo ou impediu a gravação no disco, os comandos ainda podem estar ativos na memória RAM do processo do shell (`bash`).
+
+🔹 Análise de Volatility: O _ Volatility 3_ (`vol3`), é uma ferramenta de forense de memória.
+O argumento `mem.lime` é usado quando a memória é capturada utilizando o módulo de kernel LiME (Linux Memory Extractor) no seu formato nativo (format=lime).
+
+---
+
+### Script Automatizado
+
+Para transformar esses comandos em um **script de triagem automatizado e robusto**, adicionei verificações para outras shells usadas por atacantes (como `zsh`, `fish` e `sh`).
+O script [audit_history.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/audit_history.sh) automatiza a coleta no disco, verifica evidências de adulteração e gera um relatório claro.
+
+### **Como Automatizar e Proteger o Histórico em Tempo Real**
+
+Se você gerencia o servidor e quer **impedir** que atacantes apaguem o histórico no futuro:
+
+1. **Tornar o `.bash_history` apenas para adição (*append-only*)**:
+```bash
+chattr +a /home/*/.bash_history /root/.bash_history
+
+```
+
+Isso impede que o usuário apague ou sobrescreva o arquivo (mesmo com `cat /dev/null >`).
+
+2. **Forçar gravação imediata e timestamp via `/etc/bash.bashrc**`:
+Adicione as seguintes linhas na configuração global do Bash para garantir que cada comando seja gravado instantaneamente com data e hora:
+```bash
+export HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S "
+export PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
+
+```
+
+
+### O Mistério do Histórico Vazio
+
+Em investigações cibernéticas, a ausência de evidências costuma ser, por si só, uma evidência crucial. Um dos truques mais velhos e comuns utilizados por atacantes para ocultar suas pegadas em sistemas Linux é vincular o arquivo `.bash_history` (ou equivalentes) ao `/dev/null`. Quando isso acontece, todo comando digitado desaparece instantaneamente, deixando o arquivo de histórico permanentemente vazio.
+No entanto, o que parece um "beco sem saída" pode se tornar um ponto de virada graças à perícia forense de memória. Mesmo que o atacante tenha desativado a gravação em disco ao apontar o histórico para o `/dev/null`, o buffer de histórico em processo pode continuar ativo na memória RAM. Através da análise forense da imagem da memória com o Volatility 3 (utilizando o plugin _bash_), o analista consegue extrair o buffer intacto, recuperando da sequência completa de comandos digitados pelo invasor, incluindo a URL exata de download do servidor de Comando e Controle (C2), por exemplo.
+
+🛠️ Técnicas de Recuperação:
+Se você abrir o histórico e ele estiver zerado ou ausente, ative o plano de contingência imediatamente através destas quatro frentes:
+
+[Histórico Apagado]
+       │
+       ├─► 🧠 Memória RAM ────────► Recuperar buffer em processo (Volatility 3 + plugin bash)
+       ├─► 📋 Auditd ─────────────► Reconstruir logs se o registro 'execve' estiver ativo
+       ├─► 🔐 Logs do Sudo ───────► Capturar entradas COMMAND independentemente do shell
+       └─► ⏳ Linha do Tempo ─────► Usar Sleuth Kit para inferir ações via MACB do filesystem
+
+🔹 Recuperação de Memória: Extraia o buffer volátil do processo do shell usando ferramentas de análise de memória (como o Volatility).
+
+🔹 Reconstrução via Auditd: Se o monitoramento do sistema estiver ativado com regras para a chamada de sistema execve, cada comando executado estará registrado de forma centralizada nos logs do auditor.
+
+🔹 Logs de Sudo: Monitore os logs de autenticação e elevação de privilégio. O sudo captura as entradas COMMAND diretamente, não importando o que o usuário faça com o histórico do shell.
+
+🔹 Linha do Tempo do Sistema de Arquivos (Timeline): Utilize ferramentas como o Sleuth Kit para montar uma linha do tempo dos metadados dos arquivos (UAC/CyLR/MACB). Alterações em arquivos de configuração e binários ajudam a inferir a sequência de ações
+
+### 🚫 Erros Comuns a Evitar
+
+🔹 Concluir que nada aconteceu porque o histórico está vazio
+
+🔹 Verificar apenas o histórico do root e omitindo a conta de serviço usada
+
+🔹 Sobrescrever o histórico ao executar seus próprios comandos como esse usuário
+
+🔹 Não correlacionar o histórico com os logs do `auditd` ou `sudo` para identificar lacunas
+

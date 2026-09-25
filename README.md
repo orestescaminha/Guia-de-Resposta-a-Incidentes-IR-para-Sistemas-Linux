@@ -56,24 +56,33 @@ NÃO REINICIE -> BINÁRIOS CONFIÁVEIS -> PRESERVE PRIMEIRO
 🔹 Preservação de Sessão: Grave toda a sua sessão de comandos. Cada ação deve ser reproduzível e defensável.
 
 🔹 Timestamp: Anote a hora do sistema e o deslocamento do fuso horário como seu primeiro comando.
+
 ### Preparação do Ambiente Forense
+
 Antes de rodar qualquer comando de investigação, você precisa garantir que suas próprias ações não destruam evidências ou sejam mascaradas por um rootkit.
+
 #### 1. Desativar o histórico do Shell
 ``` bash
 export HISTFILE=/dev/null; unset HISTFILE
 ```
 #### 2. Gravar a sessão
+
 Registre tudo o que você digitar e receber de saída para fins de auditoria posterior.
+
 ```bash
 script -a /mnt/forense/session.log
 ```
+
 #### 3. Usar binários confiáveis:
+
 Não use o `ls`, `ps`, `netstat` ou `lsof` do sistema infectado. Monte um dispositivo externo (ou um compartilhamento somente leitura) com ferramentas estáticas (como o `BusyBox`).
+
 ```bash
 mount -o ro /dev/sdX1 /mnt/tools # Monta a mídia externa em modo somente leitura
 /mnt/tools/busybox ps # Executa a ferramenta estática (BusyBox) a partir da mídia montada
 ```
 Ao ao executar `/mnt/tools/busybox ps`, o analista obtém a lista real de processos diretamente da fonte limpa e segura.
+
 ### Ordem de Coleta de Evidências (Ordem de Volatilidade)
 Você deve coletar os dados do mais volátil para o menos volátil
 
@@ -86,17 +95,18 @@ Você deve coletar os dados do mais volátil para o menos volátil
 👤 Estado do sistema (Uptime, usuários logados).
 
 💽 Dados do disco (Arquivos de log, artefatos no /tmp, etc.).
+
 ### Antes de Digitar Qualquer Coisa
+
 O trecho de código abaixo prepara um ambiente seguro para o analista trabalhar sem alterar o sistema comprometido e registrando toda a atividade para fins de cadeia de custódia.
+
 ```bash
 mount -o ro /dev/sdX1 /mnt/tools # a opção ro=read-only. Use o seu próprio `busybox`
 export HISTFILE=/dev/null; unset HISTFILE # Desativa a escrita do histórico de comandos da sessão do terminal.
 script -a /mnt/evidence/session.log # registra tudo o que você faz no arquivo session.log
 ```
-### Exemplo de Caso
-Um respondente digita 'reboot' em um host suspeito de mineração de criptomoedas para limpá-lo. O payload somente em memória, seu socket C2 e o binário excluído, mas em execução, desaparecem, não deixando nenhuma evidência do vetor de entrada.
 
-### ❌ Erros Comuns a Evitar
+## 🚫 Erros Comuns a Evitar
 
  ⏻ Reiniciar ou desligar o sistema antes de realizar a captura da memória RAM (isso apaga payloads em memória e sockets ativos).
 
@@ -105,14 +115,6 @@ Um respondente digita 'reboot' em um host suspeito de mineração de criptomoeda
  💽 Poluir o disco: Gravar os dados coletados e logs diretamente no sistema de arquivos do host afetado.
 
  📝 Falta de registro: Conduzir a investigação sem gravar a sessão, tornando o processo indefensável judicialmente ou em auditorias.
-### Ferramentas e Frameworks de Referência
-📥 Coleta & Triagem: VAC, CyLR, AVHL, LIMA e validação com sha256sum.
-
-🗃️ Fontes de Dados: Verificação de processos e memória via /proc, auditoria via SIEM e análise de arquivos/diretórios específicos.
-
-📐Normas Técnicas: Alinhado com a RFC 3227 (Ordem de Volatilidade) e NIST SP 800-86 (Guia de Integração de Forense Digital na Resposta a Incidentes).
-### Conclusão
-Não reinicie a máquina. Não confie nos binários locais. Grave seus passos, use ferramentas estáticas de fora e colete a memória RAM primeiro.
 
 ---
 
@@ -134,7 +136,9 @@ DESPEJAR RAM -> ENVIAR PARA FORA DO HOST -> ANALISAR POSTERIORMENTE
 🔹 Registre o horário exato e a versão da ferramenta utilizada.
 
 🔹 Último recurso: Use /proc/kcore apenas se nenhuma ferramenta de captura adequada estiver disponível.
+
 ### O Que a Memória Fornece
+
 🔹 Processos fantasma: Execução de binários que já foram deletados do disco.
 
 🔹 Evidências de rede: Conexões de rede que foram fechadas antes da chegada do investigador ao host.
@@ -142,8 +146,11 @@ DESPEJAR RAM -> ENVIAR PARA FORA DO HOST -> ANALISAR POSTERIORMENTE
 🔹 Manipulação de código: Códigos injetados e chamadas de sistema (syscalls) interceptadas.
 
 🔹 Segredos em cache: Histórico de comandos (como o histórico do bash do Linux), credenciais e chaves criptográficas diretamente do espaço de endereçamento do processo.
+
 ### Verifique a RAM com Segurança
+
 O trecho de código abaixo realiza a captura (aquisição) de memória RAM em um sistema Linux e a posterior validação e análise offline da evidência.
+
 ```bash
 ./avml /mnt/evidence/mem.lime # Executa a ferramenta AVML para salvar a memória RAM no arquivo mem.lime
 insmod lime.ko 'path="tcp:4444" format=lime' # Carrega o módulo do kernel do LiME (lime.ko) instruindo-o a enviar o dump da memória RAM via rede na porta TCP 4444 no formato LiME.
@@ -171,9 +178,10 @@ Para cada alerta encontrado, a ferramenta exibe:
 * **Desmontagem (Assembly/Disassembly)**: As primeiras instruções em linguagem assembly encontradas naquela área (ex.: chamadas de sistema, *NOP sleds*, etc.).
 
 ### Exemplo de Caso
+
 Um host não mostra nada de incomum no disco. O malfind do Volatility na imagem de memória revela uma região injetada em um processo legítimo, e o bash do Linux recupera os comandos digitados pelo atacante literalmente.
 
-### ❌ Erros Comuns a Evitar
+### 🚫 Erros Comuns a Evitar
 
 🔹 Negligência: Ignorar a coleta de memória achando que a imagem de disco é suficiente.
 
@@ -201,7 +209,8 @@ LEIA /proc -> ENCONTRE BINS EXCLUÍDOS -> PERCORRA A ÁRVORE
 
 ### Enumerar a Partir do KERNEL
 O trecho de código abaixo descreve um procedimento clássico de investigação e análise de processos via `/proc` em um sistema Linux comprometido, focado em identificar executáveis ocultos/excluídos do disco e extrair evidências em tempo real.
-```
+
+```Bash
 ls -al /proc/*/exe 2>/dev/null | grep deleted # Encontra processos em execução cujos arquivos binários executáveis originais foram apagados do disco rígido.
 cat /proc/<PID>/cmdline | tr '\0' ' ' ; echo "" # Exibe a linha de comando exata (com argumentos) usada para iniciar o processo com o PID fornecido.
 ls -al /proc/<PID>/cwd # Exibe o diretório de trabalho atual (Current Working Directory) de onde o processo está operando.
@@ -230,9 +239,7 @@ cp /proc/<PID>/exe /path/to/evidence/recovered_binary.bin # Copia o executável 
 
 🔹 Anomalia de privilégios/função: Servidores web (ex: Apache, Nginx) ou bancos de dados gerando processos filhos que são shells (`sh`, `bash`).
 
-### Exemplo de Caso
-Comparar a saída do `ps` com uma listagem de diretório de `/proc` revela um PID visível em `/proc`, mas oculto do `ps`, que é a assinatura de um rootkit de espaço do usuário interceptando a listagem de processos.
-### Erros Comuns a Evitar
+### 🚫 Erros Comuns a Evitar
 
 🔹 Confiar cegamente em ferramentas nativas como `ps`, `top` ou `netstat` em um sistema potencialmente sob efeito de um rootkit.
 
@@ -241,10 +248,6 @@ Comparar a saída do `ps` com uma listagem de diretório de `/proc` revela um PI
 🔹 Negligenciar diretórios baseados em memória RAM (`/dev/shm` e `/run`), locais muito visados para ocultar payloads.
 
 🔹 Deixar de mapear a árvore genealógica completa do processo, prejudicando a reconstrução da linha do tempo do ataque.
-
-### Conclusão
-Leia `/proc` em vez de `ps`. Ele revela o caminho executável verdadeiro, recupera binários excluídos ainda em execução e expõe o que `ps` foi configurado para ocultar.
-Em sistemas suspeitos, consulte o diretório `/proc` diretamente. Se o comando `ps` omitir um PID que está listado dentro de `/proc`, você está lidando com um rootkit que intercepta e mascara as chamadas de listagem de processos.
 
 ---
 
@@ -270,15 +273,18 @@ LISTAR SOCKETS -> MAPEAMENTO PARA PROCESSO -> VERIFICAR O PAR
 🔹 Cache ARP, tabela de roteamento e quaisquer interfaces de túnel inesperadas
 
 ### Capturar Comexões e Proprietários
+
 As conexões de rede são efêmeras e os sockets fecham rápido, o que exige rapidez do analista para capturar a evidência antes que ela desapareça.
 O trecho de código baixo reúne comandos essenciais para auditoria e investigação de rede em tempo real em um servidor Linux. O objetivo é mapear conexões ativas, relacioná-las a processos, verificar a tabela bruta do kernel, checar o estado das interfaces física/virtuais e inspecionar as regras do firewall.
-```
+
+```Bash
 ss -antpu #todos os TCP/UDP, numérico, com o processo proprietário. Substitui o netstat
 lsof -i -n -P # Lista arquivos abertos (no Linux, sockets são tratados como arquivos). Verificação cruzada ss
 cat /proc/net/tcp /proc/net/tcp6 # É onde o kernel armazena o estado bruto das conexões. A "verdade fundamental".
 ip -s link # Mostra as interfaces de rede (para ver se há interfaces em modo promíscuo ou placas virtuais estranhas).
 iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de firewall (Netfilter/Nftables).
 ```
+
 ### Resumo da Estratégia de Análise
 
 | Camada de Análise | Comando | O que revela |
@@ -301,10 +307,7 @@ iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de fir
 
 🔹 Novas regras de iptables ou uma interface de túnel que ninguém provisionou
 
-### Exemplo de Caso
-Uma única conexão estabelecida de um processo em execução a partir de `/dev/shm` para um endereço VPS confirma o caso. Os logs do proxy mostram o mesmo peer contatado a cada 300 segundos por onze dias.
-
-### ❌ Erros Comuns a Evitar
+### 🚫 Erros Comuns a Evitar
 
 🔹 Confiar apenas no estado do host para um beacon que está atualmente ocioso
 
@@ -313,9 +316,6 @@ Uma única conexão estabelecida de um processo em execução a partir de `/dev/
 🔹 Não capturar regras de firewall, entradas de permissão adicionadas pelo atacante ausentes
 
 🔹 Ignorar sockets de domínio UNIX usados ​​para C2 local entre processos
-
-### Conclusão
-Capture sockets antecipadamente e mapeie-os para os processos proprietários, mas corrobore com telemetria de rede, pois um beacon ocioso não mostra nada no host.
 
 ---
 
@@ -337,34 +337,34 @@ Abaixo estão **12 locais críticos de persistência** em ambientes Linux, organ
 
 ---
 
-## **12 locais críticos de persistência**
+### **12 locais críticos de persistência**
 
-### **1. Agendadores de Tarefas (Cron Jobs)**
+#### **1. Agendadores de Tarefas (Cron Jobs)**
 
 * **`/etc/crontab` e `/etc/cron.*` (`cron.d`, `cron.daily`, `cron.hourly`, `cron.monthly`, `cron.weekly`)**: Arquivos de configuração global do cron do sistema.
 * **`/var/spool/cron/crontabs/`** *(ou `/var/spool/cron/` dependendo da distro)*: Diretórios que armazenam os *crontabs* individuais de cada usuário do sistema (incluindo `root`).
 
-### **2. Configurações e Chaves de Acesso SSH**
+#### **2. Configurações e Chaves de Acesso SSH**
 
 * **`~/.ssh/authorized_keys` e `~/.ssh/authorized_keys2**`: Arquivos no diretório de cada usuário que armazenam chaves públicas autorizadas a realizar login sem senha via SSH.
 * **`/etc/ssh/sshd_config` e `/etc/ssh/sshd_config.d/**`: Arquivos de configuração do daemon SSH. Podem ser alterados para aceitar senhas mestras, desativar logs ou incluir opções de execução remota como `AuthorizedKeysCommand`.
 
-### **3. Serviços do Gerenciador de Inicialização (Systemd)**
+#### **3. Serviços do Gerenciador de Inicialização (Systemd)**
 
 * **`/etc/systemd/system/` e `/lib/systemd/system/**`: Locais onde ficam os arquivos de unidade (`.service`, `.timer`, `.path`) criados ou modificados para executar binários maliciosos na inicialização ou em intervalos regulares.
 * **`~/.config/systemd/user/`**: Diretório onde o *systemd* permite que usuários comuns (sem privilégios de root) configurem e executem serviços persistentes específicos no escopo do usuário.
 
-### **4. Inicialização de Perfil de Shell**
+#### **4. Inicialização de Perfil de Shell**
 
 * **`/etc/profile`, `/etc/profile.d/`, `/etc/bash.bashrc` e `/etc/zsh/zshrc**`: Arquivos de inicialização global do shell. Qualquer script inserido aqui é executado sempre que qualquer usuário abre uma nova sessão de terminal.
 * **`~/.bashrc`, `~/.bash_profile`, `~/.profile`, `~/.zshrc**`: Arquivos de configuração de shell específicos do diretório pessoal de cada usuário (`/root/` ou `/home/<usuario>/`).
 
-### **5. Scripts de Inicialização Legados e Invocadores de Sistema**
+#### **5. Scripts de Inicialização Legados e Invocadores de Sistema**
 
 * **`/etc/rc.local`**: Arquivo de script executado ao final do processo de boot em sistemas com compatibilidade SysVinit/Systemd.
 * **`/etc/init.d/` e `/etc/rc*.d/**`: Scripts de inicialização legados (*SysVinit*) e links simbólicos associados aos *runlevels* do sistema.
 
-### **6. Módulos do Kernel e Injeções de Bibliotecas**
+#### **6. Módulos do Kernel e Injeções de Bibliotecas**
 
 * **`/etc/ld.so.preload`**: Arquivo de configuração que força o carregador do sistema a pré-carregar bibliotecas dinâmicas (`.so`) antes de qualquer outra. Bastante utilizado por *userland rootkits*.
 * **`/lib/modules/$(uname -r)/` e `/etc/modules-load.d/**`: Locais de armazenamento e carregamento automático de módulos do kernel (LKMs) durante a inicialização.
@@ -391,7 +391,7 @@ Abaixo, uma sequência de comandos em uma única linha (one-liner) desenvolvida 
 O comando usa um cabeçalho visual para separar cada seção e redireciona erros de permissão ou arquivos inexistentes (`2>/dev/null`):
 Para salvar todo o resultado em um arquivo com data para anexar ao relatório de triagem ou cadeia de custódia, adicionei `| tee audit_persistencia_$(date +%Y%m%d).log` ao final do comando:
 
-```bash
+```Bash
 sudo sh -c 'for d in "/etc/crontab /etc/cron* /var/spool/cron/crontabs/*" "/root/.ssh/authorized_keys /home/*/.ssh/authorized_keys /etc/ssh/sshd_config" "/etc/systemd/system/*.service /lib/systemd/system/*.service /home/*/.config/systemd/user/* /root/.config/systemd/user/*" "/etc/profile /etc/profile.d/* /etc/bash.bashrc /root/.bashrc /root/.bash_profile /home/*/.bashrc" "/etc/rc.local /etc/init.d/* /etc/rc*.d/*" "/etc/ld.so.preload /etc/modules-load.d/*"; do echo -e "\n=== AUDITANDO: $d ==="; ls -la $d 2>/dev/null; done' | tee audit_persistencia_$(date +%Y%m%d).log
 
 ```
@@ -450,47 +450,17 @@ O script em Python 3 [monitor_persistencia.py](https://github.com/orestescaminha
 
 >_auth, journald, wtmp_
 
-A autenticação do Linux e o histórico de sessão residem em vários arquivos com formatos diferentes. Leia-os juntos: auth.log ou secure para tentativas de autenticação, journald para detalhes em nível de serviço e os binários wtmp, btmp e lastlog para registros de sessão.
-
-```
-RASTREAMENTO DE AUTENTICAÇÃO -> QUEM FEZ LOGIN -> VERIFIQUE SE HÁ LACUNAS
-```
-
->❗  LACUNAS TAMBÉM SÃO EVIDÊNCIAS: Uma hora faltando no `auth.log` ou um `wtmp` truncado é, por si só, uma descoberta, não um inconveniente.
-
-Os comandos abaixo abrangem muito bem a base tradicional de auditoria no Debian/Ubuntu e RHEL.
-
-
-```
-grep -Ei 'accepted|failed|invalid user' /var/log/auth.log # Debian; segure no RHEL
-journalctl -u sshd -since 2026-09-01 --no-pager # detalhes do nível de serviço
-last -Faixw; lastb -Fa # wtmp (sucesso) + btep (falha) # registros de sessão binária
-grep -E 'sudo:.*COMMAND=' /var/log/auth.log # trilha de escalonamento de privilégios
-```
-
-Porém, pode ser aprimorado para resolver _issues_ como: Incompatibilidade de Distros e Log Rotation; Busca apenas nos logs ativos ignorando logs rotacionados (ex.: auth.log.1, auth.log.2.gz); Ignora Eventos Ocultos e exige Análise Manual do `last/lastb`.
-
-Para elevar esse processo a um nível profissional de resposta a incidentes, a correlação de logs precisa ser automatizada e estendida a outros vetores de autenticação que frequentemente passam despercebidos (como su, sessões PAM, SSH por chave pública e falhas de sudo).
-
-O script [coleta_auth.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/coleta_auth.sh) é uma versão melhorada que analisa tentativas de autenticação e eventos de elevação de privilégio, verifica a integridade dos logs binários e exibe logins e falhas recentes.
-
----
-
-## Leia os Logs
-
->_auth, journald, wtmp_
-
 A autenticação do Linux e o histórico de sessão residem em vários arquivos com formatos diferentes. Leia-os juntos: auth.log ou secure para tentativas de autenticação, journald para detalhes em nível de serviço e os binários `wtmp`, `btmp` e `lastlog` para registros de sessão.
 
 ```
 RASTREAMENTO DE AUTENTICAÇÃO -> QUEM FEZ LOGIN -> VERIFIQUE SE HÁ LACUNAS
 ```
 
->❗  LACUNAS TAMBÉM SÃO EVIDÊNCIAS: Uma hora faltando no `auth.log` ou um `wtmp` truncado é, por si só, uma descoberta, não um inconveniente.
+>❗ LACUNAS TAMBÉM SÃO EVIDÊNCIAS: Uma hora faltando no `auth.log` ou um `wtmp` truncado é, por si só, uma descoberta, não um inconveniente.
 
 Os comandos abaixo abrangem muito bem a base tradicional de auditoria no Debian/Ubuntu e RHEL.
 
-```
+```Bash
 grep -Ei 'accepted|failed|invalid user' /var/log/auth.log # Debian; segure no RHEL
 journalctl -u sshd -since 2026-09-01 --no-pager # detalhes do nível de serviço
 last -Faixw; lastb -Fa # wtmp (sucesso) + btep (falha) # registros de sessão binária
@@ -565,7 +535,7 @@ O argumento `mem.lime` é usado quando a memória é capturada utilizando o mód
 Para transformar esses comandos em um **script de triagem automatizado e robusto**, adicionei verificações para outras shells usadas por atacantes (como `zsh`, `fish` e `sh`).
 O script [audit_history.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/audit_history.sh) automatiza a coleta no disco, verifica evidências de adulteração e gera um relatório claro.
 
-### **Como Automatizar e Proteger o Histórico em Tempo Real**
+### **Automação e Proteção do Histórico em Tempo Real**
 
 Se você gerencia o servidor e quer **impedir** que atacantes apaguem o histórico no futuro:
 
@@ -585,7 +555,6 @@ export PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
 
 ```
 
-
 ### O Mistério do Histórico Vazio
 
 Em investigações cibernéticas, a ausência de evidências costuma ser, por si só, uma evidência crucial. Um dos truques mais velhos e comuns utilizados por atacantes para ocultar suas pegadas em sistemas Linux é vincular o arquivo `.bash_history` (ou equivalentes) ao `/dev/null`. Quando isso acontece, todo comando digitado desaparece instantaneamente, deixando o arquivo de histórico permanentemente vazio.
@@ -595,6 +564,7 @@ No entanto, o que parece um "beco sem saída" pode se tornar um ponto de virada 
 Se você abrir o histórico e ele estiver zerado ou ausente, ative o plano de contingência imediatamente através destas quatro frentes:
 
 [Histórico Apagado]
+
        │
        ├─► 🧠 Memória RAM ────────► Recuperar buffer em processo (Volatility 3 + plugin bash)
        ├─► 📋 Auditd ─────────────► Reconstruir logs se o registro 'execve' estiver ativo

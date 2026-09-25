@@ -741,4 +741,14 @@ Como eles rodam dentro da máquina virtual eBPF do kernel, ferramentas tradicion
 
 ---
 
+## 9. Containers e Nuvem
 
+[Editando]
+
+---
+
+## 10. Análise de Exfiltração
+
+[Editando]
+
+---

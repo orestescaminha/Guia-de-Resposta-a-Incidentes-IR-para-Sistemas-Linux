@@ -43,21 +43,23 @@ NÃO REINICIE -> BINÁRIOS CONFIÁVEIS -> PRESERVE PRIMEIRO
 ---
 
 ### Estratégia: Isolar vs. Observar
-🔹 Isolar a Rede: Faça isso imediatamente se houver destruição ativa de dados ou exfiltração em andamento.
 
-🔹 Observar Primeiro: Se o cenário estiver suspeito, mas contido, observe e colete a memória RAM antes de cortar os acessos.
+🔹 **Isolar a Rede**: Faça isso imediatamente se houver destruição ativa de dados ou exfiltração em andamento.
 
-🔹 Serviços Críticos: Coordene com os proprietários do serviço. Nunca tome ações unilaterais em ambientes de produção.
+🔹 **Observar Primeiro**: Se o cenário estiver suspeito, mas contido, observe e colete a memória RAM antes de cortar os acessos.
 
-🔹 Fique Furtivo: Se o atacante estiver observando, evite rodar comandos defensivos óbvios diretamente no host.
+🔹 **Serviços Críticos**: Coordene com os proprietários do serviço. Nunca tome ações unilaterais em ambientes de produção.
+
+🔹 **Fique Furtivo**: Se o atacante estiver observando, evite rodar comandos defensivos óbvios diretamente no host.
 ### Ações Imediatas (Antes de Tocar no Teclado)
-🔹 Decisão de Isolamento: Defina a estratégia com o líder do incidente antes de agir.
 
-🔹 Kit de Ferramentas: Traga um kit estático e confiável em mídia de somente leitura. Nunca use os binários do host comprometido.
+🔹 **Decisão de Isolamento**: Defina a estratégia com o líder do incidente antes de agir.
 
-🔹 Preservação de Sessão: Grave toda a sua sessão de comandos. Cada ação deve ser reproduzível e defensável.
+🔹 **Kit de Ferramentas**: Traga um kit estático e confiável em mídia de somente leitura. Nunca use os binários do host comprometido.
 
-🔹 Timestamp: Anote a hora do sistema e o deslocamento do fuso horário como seu primeiro comando.
+🔹 **Preservação de Sessão**: Grave toda a sua sessão de comandos. Cada ação deve ser reproduzível e defensável.
+
+🔹 **Timestamp**: Anote a hora do sistema e o deslocamento do fuso horário como seu primeiro comando.
 
 ### Preparação do Ambiente Forense
 
@@ -110,13 +112,13 @@ script -a /mnt/evidence/session.log # registra tudo o que você faz no arquivo s
 
 ### 🚫 Erros Comuns a Evitar
 
- ⏻ Reiniciar ou desligar o sistema antes de realizar a captura da memória RAM (isso apaga payloads em memória e sockets ativos).
+ ⏻ **Reiniciar ou desligar** o sistema antes de realizar a captura da memória RAM (isso apaga payloads em memória e sockets ativos).
 
- 💻 Confiar no host: Executar comandos como `ps`, `ls` ou `netstat` nativos do sistema comprometido (eles podem ter sido adulterados por um Rootkit).
+ 💻 **Confiar no host**: Executar comandos como `ps`, `ls` ou `netstat` nativos do sistema comprometido (eles podem ter sido adulterados por um Rootkit).
 
- 💽 Poluir o disco: Gravar os dados coletados e logs diretamente no sistema de arquivos do host afetado.
+ 💽 **Poluir o disco**: Gravar os dados coletados e logs diretamente no sistema de arquivos do host afetado.
 
- 📝 Falta de registro: Conduzir a investigação sem gravar a sessão, tornando o processo indefensável judicialmente ou em auditorias.
+ 📝 **Falta de registro**: Conduzir a investigação sem gravar a sessão, tornando o processo indefensável judicialmente ou em auditorias.
 
 ---
 
@@ -131,25 +133,25 @@ A memória contém o que o disco jamais conterá: código injetado, payloads des
 DESPEJAR RAM -> ENVIAR PARA FORA DO HOST -> ANALISAR POSTERIORMENTE
 ```
 ### Regras de Aquisição
-🔹 Prioridade máxima: Capture a memória antes de executar outros comandos no host para evitar a corrupção de dados (artefatos).
+🔹 **Prioridade máxima**: Capture a memória antes de executar outros comandos no host para evitar a corrupção de dados (artefatos).
 
-🔹 Destino seguro: Transmita os dados diretamente para um ouvinte de rede ou mídia externa. Nunca grave o arquivo de dump no disco local do host investigado.
+🔹 **Destino seguro**: Transmita os dados diretamente para um ouvinte de rede ou mídia externa. Nunca grave o arquivo de dump no disco local do host investigado.
 
-🔹 Integridade e registro: Calcule o hash (ex: sha256sum) imediatamente após a aquisição.
+🔹 **Integridade e Registro**: Calcule o hash (ex: sha256sum) imediatamente após a aquisição.
 
-🔹 Registre o horário exato e a versão da ferramenta utilizada.
+🔹 **Registrar**: o horário exato e a versão da ferramenta utilizada.
 
-🔹 Último recurso: Use /proc/kcore apenas se nenhuma ferramenta de captura adequada estiver disponível.
+🔹 **Último recurso**: Use `/proc/kcore` apenas se nenhuma ferramenta de captura adequada estiver disponível.
 
 ### O Que a Memória Fornece
 
-🔹 Processos fantasma: Execução de binários que já foram deletados do disco.
+🔹 **Processos fantasma**: Execução de binários que já foram deletados do disco.
 
-🔹 Evidências de rede: Conexões de rede que foram fechadas antes da chegada do investigador ao host.
+🔹 **Evidências de rede**: Conexões de rede que foram fechadas antes da chegada do investigador ao host.
 
-🔹 Manipulação de código: Códigos injetados e chamadas de sistema (syscalls) interceptadas.
+🔹 **Manipulação de código**: Códigos injetados e chamadas de sistema (syscalls) interceptadas.
 
-🔹 Segredos em cache: Histórico de comandos (como o histórico do bash do Linux), credenciais e chaves criptográficas diretamente do espaço de endereçamento do processo.
+🔹 **Segredos em cache**: Histórico de comandos (como o histórico do bash do Linux), credenciais e chaves criptográficas diretamente do espaço de endereçamento do processo.
 
 ### Verifique a RAM com Segurança
 
@@ -186,13 +188,13 @@ Para cada alerta encontrado, a ferramenta exibe:
 
 ### 🚫 Erros Comuns a Evitar
 
-🔹 Negligência: Ignorar a coleta de memória achando que a imagem de disco é suficiente.
+🔹 **Negligência**: Ignorar a coleta de memória achando que a imagem de disco é suficiente.
 
-🔹 Poluição de provas: Gravar o arquivo de saída (dump) dentro do próprio host afetado.
+🔹 **Poluição de provas**: Gravar o arquivo de saída (dump) dentro do próprio host afetado.
 
-🔹 Falta de documentação: Esquecer de registrar a versão do Kernel (essencial para criar perfis de análise no Volatility).
+🔹 **Falta de documentação**: Esquecer de registrar a versão do Kernel (essencial para criar perfis de análise no Volatility).
 
-🔹 Ordem errada: Capturar a memória após rodar dezenas de comandos de triagem, destruindo evidências voláteis.
+🔹 **Ordem errada**: Capturar a memória após rodar dezenas de comandos de triagem, destruindo evidências voláteis.
 
 ---
 
@@ -232,13 +234,13 @@ cp /proc/<PID>/exe /path/to/evidence/recovered_binary.bin # Copia o executável 
 
 ### Padrões Suspeitos (Indicadores de Comprometimento)
 
-🔹 Diretórios temporários: Processos rodando a partir de `/tmp`, `/dev/shm` ou `/var/tmp`.
+🔹 **Diretórios temporários**: Processos rodando a partir de `/tmp`, `/dev/shm` ou `/var/tmp`.
 
-🔹 Binários excluídos: Processos rodando a partir de um inode deletado (técnica clássica de fileless malware).
+🔹 **Binários excluídos**: Processos rodando a partir de um inode deletado (técnica clássica de fileless malware).
 
-🔹 Falsa identidade: Processos com nomes disfarçados de threads do kernel (ex: entre colchetes como [kworker/0:1]), mas que possuem um caminho executável real associado no `/proc`.
+🔹 **Falsa identidade**: Processos com nomes disfarçados de threads do kernel (ex: entre colchetes como [kworker/0:1]), mas que possuem um caminho executável real associado no `/proc`.
 
-🔹 Anomalia de privilégios/função: Servidores web (ex: Apache, Nginx) ou bancos de dados gerando processos filhos que são shells (`sh`, `bash`).
+🔹 **Anomalia de privilégios/função**: Servidores web (ex: Apache, Nginx) ou bancos de dados gerando processos filhos que são shells (`sh`, `bash`).
 
 ### 🚫 Erros Comuns a Evitar
 

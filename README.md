@@ -594,3 +594,72 @@ Se você abrir o histórico e ele estiver zerado ou ausente, ative o plano de co
 
 🔹 Não correlacionar o histórico com os logs do `auditd` ou `sudo` para identificar lacunas
 
+## 7. Reconstrur a Linha do Tempo
+
+>_HORÁRIOS MAC E SUPER LINHAS DO TEMPO_
+
+Uma linha do tempo transforma artefatos dispersos em uma narrativa. Os horários MAC do sistema de arquivos fornecem o primeiro ponto de partida, e uma super linha do tempo que mescla eventos do sistema de arquivos, logs e aplicativos revela o momento de acesso inicial e tudo o que se seguiu.
+
+**_Fluxo de Trabalho_**
+```
+COLETAR MAC -> MESCLAR FONTES -> ENCONTRAR A JANELA
+```
+
+> `atime` é frequentemente inútil: A maioria das montagens modernas usa `relatime` ou `noatime`, portanto, os horários de acesso não são atualizados da maneira que as pessoas presumem
+
+### Dos Horários MAC para uma Super Linha do Tempo
+
+O fluxo de trabalho dos comandos abaixo aborda as três camadas essenciais de análise temporal: a coleta rápida do sistema de arquivos ao vivo, a extração profunda de volumes via `Sleuth Kit` e a geração de super timelines automatizadas com a suíte `Plaso`.
+
+```Bash
+find / -xdev -newerct '2026-09-01' -printf '%T@ %p\n' | sort -n # Extrai e ordena timestamps cronologicamente e isola arquivos alterados a partir de um momento suspeito
+stat suspect.bin # Verifica os atributos de um arquivo específico (atime, mtime, ctime, e birth se disponível). Observe ctime vs mtime
+fls -r -m / image.dd > body.txt # Sleuth Kit bodyfile. Cria a estrutura de texto mapeando o sistema de arquivos da imagem do disco
+mactime -b body.txt -d # Transforma os dados brutos coletados pelo Sleuth Kit em uma linha do tempo legível
+log2timeline.py --storagefile case.plaso image.dd; psort.py # Super Timeline. Utiliza a suíte Plaso para processar a imagem do disco, extrair logs de eventos, histórico de navegadores e registros, gerando um arquivo de armazenamento centralizado
+```
+
+#### Encontrar a Janela (Análise e Armadilhas)
+
+Com os dados unificados, o investigador deve localizar o momento exato do acesso inicial e as ações subsequentes do atacante, atentando-se para duas regras críticas:
+
+🔹 **A armadilha do `atime`**: O horário de acesso (`atime`) frequentemente não é confiável em sistemas modernos. A maioria das montagens utiliza as diretivas `relatime` ou `noatime`, o que impede a atualização padrão desse metadado.
+
+🔹 **A confiabilidade do `ctime`**: O horário de mudança de status (`ctime`) monitora alterações nos metadados do arquivo (como permissões ou ownership). Ele é atualizado pelo kernel e não pode ser facilmente alterado de forma retroativa por ferramentas comuns de "timestomping" (falsificação de tempo), tornando-se o indicador mais seguro para a investigação.
+
+Porém, apliquei melhorias técnicas para automatizar o processo, otimizando os comandos, tratando exceções de fuso horário e construir a linha do tempo em formato UTC.
+
+### **Script Automatizado**
+
+O script [generate_utc_timeline.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/generate_utc_timeline.sh) consolida a coleta de timestamps no disco ao vivo ou na imagem de disco, normaliza as entradas para UTC e organiza os arquivos de saída em uma pasta do caso.
+
+
+### Detecção de Timestomp
+
+O Timestomp é uma ferramenta capaz de excluir ou alterar informações de data e hora de arquivos, como os horários de criação, modificação, acesso e entrada. Ele pode ser utilizado para burlar análises forenses, mas seu uso também pode ser detectado pela ausência de valores de carimbo de data/hora ou pela presença de valores inconsistentes.
+
+🔍 Sinais para Detecção de Timestomping
+
+Fique atento a estas quatro inconsistências clássicas nos atributos MACB (Modified, Accessed, Created, Born):
+
+🔹 **Incompatibilidade básica**: `mtime` registrado como mais antigo que o `ctime` no mesmo arquivo.
+
+🔹 **Paradoxo cronológico**: Hora de criação do arquivo posterior à sua própria hora de modificação.
+
+🔹 **Padronização artificial**: Timestamps perfeitamente idênticos (ao nível de segundos) em múltiplos arquivos que não possuem relação entre si.
+
+🔹 **Inconsistência de diretório:** O `mtime` da pasta mãe diverge completamente dos horários dos arquivos contidos nela.
+
+🚫 Erros Críticos
+
+🔹 **Evitar/Ignorar o deslocamento (offset) do host**: Misturar registros em hora local com fontes em UTC, quebrando a sequência lógica dos fatos.
+
+🔹 **Falso voto de confiança no `mtime`**: Validar o mtime sem cruzar dados diretamente com o ctime para verificar adulterações.
+
+🔹 **Visão limitada ao disco**: Construir a linha do tempo baseando-se apenas no sistema de arquivos, deixando de fora os logs e os artefatos voláteis da memória RAM.
+
+🔹 **Análise de `atime` inválida**: Confiar no horário de acesso (`atime`) em partições montadas com as flags `relatime` ou `noatime`.
+
+---
+
+

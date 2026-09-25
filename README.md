@@ -568,21 +568,19 @@ No entanto, o que parece um "beco sem saída" pode se tornar um ponto de virada 
 🛠️ **Técnicas de Recuperação**:
 Se você abrir o histórico e ele estiver zerado ou ausente, ative o plano de contingência imediatamente através destas quatro frentes:
 
-[Histórico Apagado]
-
        │
        ├─► 🧠 Memória RAM ────────► Recuperar buffer em processo (Volatility 3 + plugin bash)
        ├─► 📋 Auditd ─────────────► Reconstruir logs se o registro 'execve' estiver ativo
        ├─► 🔐 Logs do Sudo ───────► Capturar entradas COMMAND independentemente do shell
        └─► ⏳ Linha do Tempo ─────► Usar Sleuth Kit para inferir ações via MACB do filesystem
 
-🔹 Recuperação de Memória: Extraia o buffer volátil do processo do shell usando ferramentas de análise de memória (como o Volatility).
+🔹 **Recuperação de Memória**: Extraia o buffer volátil do processo do shell usando ferramentas de análise de memória (como o Volatility).
 
-🔹 Reconstrução via Auditd: Se o monitoramento do sistema estiver ativado com regras para a chamada de sistema execve, cada comando executado estará registrado de forma centralizada nos logs do auditor.
+🔹 **Reconstrução via Auditd**: Se o monitoramento do sistema estiver ativado com regras para a chamada de sistema execve, cada comando executado estará registrado de forma centralizada nos logs do auditor.
 
-🔹 Logs de Sudo: Monitore os logs de autenticação e elevação de privilégio. O sudo captura as entradas COMMAND diretamente, não importando o que o usuário faça com o histórico do shell.
+🔹 **Logs de Sudo**: Monitore os logs de autenticação e elevação de privilégio. O sudo captura as entradas COMMAND diretamente, não importando o que o usuário faça com o histórico do shell.
 
-🔹 Linha do Tempo do Sistema de Arquivos (Timeline): Utilize ferramentas como o Sleuth Kit para montar uma linha do tempo dos metadados dos arquivos (UAC/CyLR/MACB). Alterações em arquivos de configuração e binários ajudam a inferir a sequência de ações
+🔹 **Linha do Tempo do Sistema de Arquivos (Timeline)**: Utilize ferramentas como o Sleuth Kit para montar uma linha do tempo dos metadados dos arquivos (UAC/CyLR/MACB). Alterações em arquivos de configuração e binários ajudam a inferir a sequência de ações
 
 ### 🚫 Erros Comuns a Evitar
 

@@ -724,7 +724,7 @@ Como eles rodam dentro da máquina virtual eBPF do kernel, ferramentas tradicion
 
 ### Script Automatizado
 
-O script aprimorado [detect_rootkits.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/detect_rootkits.sh) automatiza todas as verificações por discordância e gera alertas claros caso identifique inconsistências no sistema.
+O script aprimorado [detect_rootkits.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/detect_rootkits.sh) automatiza a detecção de rootkits verificando a integridade dos binários do sistema, processos e módulos do kernel (por discordância) e gera alertas claros caso identifique inconsistências no sistema
 
 ### Indicadores
 

@@ -35,6 +35,8 @@ Esse guia aborda a investigação em 12 etapas:
 >_NÃO DESTRUA AS EVIDÊNCIAS_
 
 O primeiro respondente causa mais danos do que o atacante na maioria dos casos do Linux. Cada comando que você digita grava no histórico do shell, atualiza os horários de acesso e aloca memória. Decida a ordem de coleta antes de tocar no teclado e nunca confie nos binários do próprio host comprometido.
+
+**_Fluxo de Trabalho_**
 ```
 NÃO REINICIE -> BINÁRIOS CONFIÁVEIS -> PRESERVE PRIMEIRO
 ```
@@ -123,6 +125,8 @@ script -a /mnt/evidence/session.log # registra tudo o que você faz no arquivo s
 
 A memória RAM deve ser capturada antes de qualquer outra etapa de coleta, pois ela contém dados voláteis cruciais (como códigos injetados e conexões ativas) que nunca serão encontrados em uma imagem de disco.
 A memória contém o que o disco jamais conterá: código injetado, payloads descriptografados, sockets C2, credenciais e processos cujos binários foram excluídos após a inicialização. Colete o conteúdo primeiro, transmita-o para fora do host e faça o hash imediatamente para que a cadeia de custódia comece limpa.
+
+**_Fluxo de Trabalho_**
 ```
 DESPEJAR RAM -> ENVIAR PARA FORA DO HOST -> ANALISAR POSTERIORMENTE
 ```
@@ -177,10 +181,6 @@ Para cada alerta encontrado, a ferramenta exibe:
 * **Cabeçalho/Dump em Hexadecimal (Hexdump)**: Os primeiros bytes da região apontada.
 * **Desmontagem (Assembly/Disassembly)**: As primeiras instruções em linguagem assembly encontradas naquela área (ex.: chamadas de sistema, *NOP sleds*, etc.).
 
-### Exemplo de Caso
-
-Um host não mostra nada de incomum no disco. O malfind do Volatility na imagem de memória revela uma região injetada em um processo legítimo, e o bash do Linux recupera os comandos digitados pelo atacante literalmente.
-
 ### 🚫 Erros Comuns a Evitar
 
 🔹 Negligência: Ignorar a coleta de memória achando que a imagem de disco é suficiente.
@@ -191,9 +191,6 @@ Um host não mostra nada de incomum no disco. O malfind do Volatility na imagem 
 
 🔹 Ordem errada: Capturar a memória após rodar dezenas de comandos de triagem, destruindo evidências voláteis.
 
-### Conclusão
-Memória primeiro, sempre. Ela contém código injetado, binários deletados, mas em execução, e sockets ativos que nenhuma imagem de disco jamais conterá
-
 ---
 
 ## 3. Processos e /proc
@@ -202,6 +199,7 @@ Memória primeiro, sempre. Ela contém código injetado, binários deletados, ma
 O conceito central aqui é a confiança nas fontes de dados: ferramentas de espaço do usuário (userland) como `ps`, `ls` e `netstat` podem ser facilmente adulteradas por atacantes, enquanto o diretório `/proc` interage diretamente com o kernel do sistema.
 O sistema de arquivos `/proc` é a sua verdade fundamental em um host Linux ativo. Ele expõe o caminho executável real de cada processo, sua linha de comando, seu diretório de trabalho e seus descritores de arquivo abertos, incluindo binários que foram excluídos do disco após a execução.
 
+**_Fluxo de Trabalho_**
 ```
 LEIA /proc -> ENCONTRE BINS EXCLUÍDOS -> PERCORRA A ÁRVORE
 ```
@@ -256,6 +254,7 @@ cp /proc/<PID>/exe /path/to/evidence/recovered_binary.bin # Copia o executável 
 
 O estado da rede em tempo real vincula um processo suspeito a um destino externo, que geralmente é a rota mais rápida para confirmar a violação. Capture-o cedo, porque os sockets fecham, e correlacione o endereço do par com seus logs de saída para obter o quadro completo.
 
+**_Fluxo de Trabalho_**
 ```
 LISTAR SOCKETS -> MAPEAMENTO PARA PROCESSO -> VERIFICAR O PAR
 ```
@@ -325,6 +324,7 @@ iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de fir
 
 O Linux oferece um amplo menu de locais de persistência e a maioria dos respondentes verifica apenas dois. Trabalhe com uma lista escrita sempre, porque o invasor que deixou um cron job quase certamente também deixou uma chave SSH, uma unidade systemd ou uma modificação de perfil de shell.
 
+**_Fluxo de Trabalho_**
 ```
 VERIFIQUE TODOS -> TEMPORIZADORES CRON -> CHAVES SSH
 ```
@@ -452,6 +452,7 @@ O script em Python 3 [monitor_persistencia.py](https://github.com/orestescaminha
 
 A autenticação do Linux e o histórico de sessão residem em vários arquivos com formatos diferentes. Leia-os juntos: auth.log ou secure para tentativas de autenticação, journald para detalhes em nível de serviço e os binários `wtmp`, `btmp` e `lastlog` para registros de sessão.
 
+**_Fluxo de Trabalho_**
 ```
 RASTREAMENTO DE AUTENTICAÇÃO -> QUEM FEZ LOGIN -> VERIFIQUE SE HÁ LACUNAS
 ```
@@ -480,6 +481,7 @@ O script [coleta_auth.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-I
 Aqui, o foco principal é a análise de histórico de comandos (shell history) para rastrear ações de atacantes.
 O histórico do shell é o artefato de maior valor quando sobrevive, fornecendo os comandos exatos do atacante. Verifique cada usuário, procure os truques usados ​​para suprimi-lo e lembre-se de que o histórico não gravado ainda pode ser recuperado da memória.
 
+**_Fluxo de Trabalho_**
 ```
 ENCONTRAR HISTÓRICOS -> VERIFICAR TRUQUES -> TEMPO DE RECUPERAÇÃO
 ```

@@ -678,7 +678,7 @@ SUSPEITE DO SO -> COMPARE AS VISUALIZAÇÕES -> CONFIE NA MEMÓRIA
 >**UM OUTPUT LIMPO NÃO PROVA NADA**: se o rootkit interceptar as ferramentas que você está usando, cada comando informará educadamente que está tudo bem.
 
 
-> DETECTE POR DISCORDÂNCIA
+### Detectando por Discordância
 
 ```Bash
 ls /proc | grep -E '^[0-9]+$' | sort -n vs ps -e --no-headers # PID visível em um, não no outro

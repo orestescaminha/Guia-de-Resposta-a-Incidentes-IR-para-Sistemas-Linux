@@ -560,7 +560,7 @@ export PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
 Em investigações cibernéticas, a ausência de evidências costuma ser, por si só, uma evidência crucial. Um dos truques mais velhos e comuns utilizados por atacantes para ocultar suas pegadas em sistemas Linux é vincular o arquivo `.bash_history` (ou equivalentes) ao `/dev/null`. Quando isso acontece, todo comando digitado desaparece instantaneamente, deixando o arquivo de histórico permanentemente vazio.
 No entanto, o que parece um "beco sem saída" pode se tornar um ponto de virada graças à perícia forense de memória. Mesmo que o atacante tenha desativado a gravação em disco ao apontar o histórico para o `/dev/null`, o buffer de histórico em processo pode continuar ativo na memória RAM. Através da análise forense da imagem da memória com o Volatility 3 (utilizando o plugin _bash_), o analista consegue extrair o buffer intacto, recuperando da sequência completa de comandos digitados pelo invasor, incluindo a URL exata de download do servidor de Comando e Controle (C2), por exemplo.
 
-🛠️ Técnicas de Recuperação:
+🛠️ **Técnicas de Recuperação**:
 Se você abrir o histórico e ele estiver zerado ou ausente, ative o plano de contingência imediatamente através destas quatro frentes:
 
 [Histórico Apagado]

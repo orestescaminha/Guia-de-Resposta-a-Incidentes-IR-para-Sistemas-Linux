@@ -650,6 +650,17 @@ Fique atento a estas quatro inconsistências clássicas nos atributos MACB (Modi
 
 🔹 **Inconsistência de diretório:** O `mtime` da pasta mãe diverge completamente dos horários dos arquivos contidos nela.
 
+### **Resumo da Matriz MACB no Linux**
+
+Ao correlacionar as fontes na timeline, utilize esta referência rápida para mapear os tipos de eventos registrados nos artefatos:
+
+| Sigla | Atributo | Significado | Comportamento em Ataques / Timestomping |
+| --- | --- | --- | --- |
+| **M** | **Modification** (`mtime`) | Data/hora da última alteração no **conteúdo** do arquivo. | Pode ser facilmente alterado via comando `touch -m -t`. |
+| **A** | **Access** (`atime`) | Data/hora do último **acesso/leitura** do arquivo. | Frequentemente desativado em servidores por performance (`noatime`). |
+| **C** | **Change** (`ctime`) | Data/hora da última alteração nos **metadados/i-node** (permissões, dono, tamanho). | **Dificultado de falsificar**: o kernel atualiza o `ctime` sempre que o arquivo ou seus atributos mudam (incluindo via `touch`). |
+| **B** | **Birth** (`btime`) | Data/hora da **criação** original do arquivo no sistema de arquivos. | Suportado em EXT4, XFS e Btrfs modernos (requer suporte da glibc/kernel). |
+
 ### 🚫 Erros Comuns a Evitar
 
 🔹 **Evitar/Ignorar o deslocamento (offset) do host**: Misturar registros em hora local com fontes em UTC, quebrando a sequência lógica dos fatos.

@@ -443,3 +443,63 @@ echo "=== PRELOAD ==="; [ -f /etc/ld.so.preload ] && cat /etc/ld.so.preload || e
 
 Para automatizar o monitoramento contínuo dos 12 locais de persistência, a melhor abordagem é calcular e salvar o **hash SHA-256** do conteúdo dos arquivos e diretórios críticos em uma linha de base (*baseline*). Em execuções subsequentes, o script compara a baseline antiga com o estado atual e alerta se um arquivo foi **criado**, **modificado** ou **removido**.
 O script em Python 3 [monitor_persistencia.py](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/monitor_persistencia.py) é uma solução completa , pronta para produção e sem dependências externas.
+
+---
+
+## Leia os Logs
+
+>_auth, journald, wtmp_
+
+A autenticação do Linux e o histórico de sessão residem em vários arquivos com formatos diferentes. Leia-os juntos: auth.log ou secure para tentativas de autenticação, journald para detalhes em nível de serviço e os binários wtmp, btmp e lastlog para registros de sessão.
+
+```
+RASTREAMENTO DE AUTENTICAÇÃO -> QUEM FEZ LOGIN -> VERIFIQUE SE HÁ LACUNAS
+```
+
+>❗  LACUNAS TAMBÉM SÃO EVIDÊNCIAS: Uma hora faltando no `auth.log` ou um `wtmp` truncado é, por si só, uma descoberta, não um inconveniente.
+
+Os comandos abaixo abrangem muito bem a base tradicional de auditoria no Debian/Ubuntu e RHEL.
+
+
+```
+grep -Ei 'accepted|failed|invalid user' /var/log/auth.log # Debian; segure no RHEL
+journalctl -u sshd -since 2026-09-01 --no-pager # detalhes do nível de serviço
+last -Faixw; lastb -Fa # wtmp (sucesso) + btep (falha) # registros de sessão binária
+grep -E 'sudo:.*COMMAND=' /var/log/auth.log # trilha de escalonamento de privilégios
+```
+
+Porém, pode ser aprimorado para resolver _issues_ como: Incompatibilidade de Distros e Log Rotation; Busca apenas nos logs ativos ignorando logs rotacionados (ex.: auth.log.1, auth.log.2.gz); Ignora Eventos Ocultos e exige Análise Manual do `last/lastb`.
+
+Para elevar esse processo a um nível profissional de resposta a incidentes, a correlação de logs precisa ser automatizada e estendida a outros vetores de autenticação que frequentemente passam despercebidos (como su, sessões PAM, SSH por chave pública e falhas de sudo).
+
+O script [coleta_auth.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/coleta_auth.sh) é uma versão melhorada que analisa tentativas de autenticação e eventos de elevação de privilégio, verifica a integridade dos logs binários e exibe logins e falhas recentes.
+
+---
+
+## Leia os Logs
+
+>_auth, journald, wtmp_
+
+A autenticação do Linux e o histórico de sessão residem em vários arquivos com formatos diferentes. Leia-os juntos: auth.log ou secure para tentativas de autenticação, journald para detalhes em nível de serviço e os binários `wtmp`, `btmp` e `lastlog` para registros de sessão.
+
+```
+RASTREAMENTO DE AUTENTICAÇÃO -> QUEM FEZ LOGIN -> VERIFIQUE SE HÁ LACUNAS
+```
+
+>❗  LACUNAS TAMBÉM SÃO EVIDÊNCIAS: Uma hora faltando no `auth.log` ou um `wtmp` truncado é, por si só, uma descoberta, não um inconveniente.
+
+Os comandos abaixo abrangem muito bem a base tradicional de auditoria no Debian/Ubuntu e RHEL.
+
+```
+grep -Ei 'accepted|failed|invalid user' /var/log/auth.log # Debian; segure no RHEL
+journalctl -u sshd -since 2026-09-01 --no-pager # detalhes do nível de serviço
+last -Faixw; lastb -Fa # wtmp (sucesso) + btep (falha) # registros de sessão binária
+grep -E 'sudo:.*COMMAND=' /var/log/auth.log # trilha de escalonamento de privilégios
+```
+
+Porém, pode ser aprimorado para resolver _issues_ como: Incompatibilidade de Distros e Log Rotation; Busca apenas nos logs ativos ignorando logs rotacionados (ex.: auth.log.1, auth.log.2.gz); Ignora Eventos Ocultos e exige Análise Manual do `last/lastb`.
+
+Para elevar esse processo a um nível profissional de resposta a incidentes, a correlação de logs precisa ser automatizada e estendida a outros vetores de autenticação que frequentemente passam despercebidos (como su, sessões PAM, SSH por chave pública e falhas de sudo).
+
+O script [coleta_auth.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/coleta_auth.sh) é uma versão melhorada que analisa tentativas de autenticação e eventos de elevação de privilégio, verifica a integridade dos logs binários e exibe logins e falhas recentes.
+

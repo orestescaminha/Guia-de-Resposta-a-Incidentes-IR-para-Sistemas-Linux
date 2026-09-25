@@ -162,7 +162,7 @@ sha256sum mem.lime > mem.lime.sha256 # Calcula o valor hash do arquivo de memór
 vol3 -f mem.lime linux.pslist / linux.bash / linux.malfind # Executa o Volatility 3 apontando para a imagem de memória capturada (mem.lime) executando plugins de investigação.
 ```
 
-#### Detalhamento dos Componentes
+#### Detalhamento do Código
 
 * **`mount`**: Comando utilitário no Linux usado para anexar o sistema de arquivos de um dispositivo (disco, pendrive, partição) à estrutura principal de diretórios do sistema.
 * **`-o ro`**: Flag de opções (`-o`). A opção **`ro`** significa ***read-only*** (somente leitura). Impede qualquer alteração, gravação ou exclusão de dados no dispositivo enquanto ele estiver montado.

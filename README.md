@@ -108,7 +108,7 @@ export HISTFILE=/dev/null; unset HISTFILE # Desativa a escrita do histórico de 
 script -a /mnt/evidence/session.log # registra tudo o que você faz no arquivo session.log
 ```
 
-## 🚫 Erros Comuns a Evitar
+### 🚫 Erros Comuns a Evitar
 
  ⏻ Reiniciar ou desligar o sistema antes de realizar a captura da memória RAM (isso apaga payloads em memória e sockets ativos).
 
@@ -177,8 +177,11 @@ vol3 -f mem.lime linux.pslist / linux.bash / linux.malfind # Executa o Volatilit
 Para cada alerta encontrado, a ferramenta exibe:
 
 * **PID e Nome do Processo**: O processo que abriga a memória suspeita.
+
 * **Endereço de Memória e Tamanho**: A localização exata no espaço de endereçamento do processo.
+
 * **Cabeçalho/Dump em Hexadecimal (Hexdump)**: Os primeiros bytes da região apontada.
+
 * **Desmontagem (Assembly/Disassembly)**: As primeiras instruções em linguagem assembly encontradas naquela área (ex.: chamadas de sistema, *NOP sleds*, etc.).
 
 ### 🚫 Erros Comuns a Evitar
@@ -318,7 +321,7 @@ iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de fir
 
 ---
 
-## Busca por Persistências
+## 4. Busca por Persistências
 
 >_DOZE LUGARES PARA PROCURAR_
 
@@ -446,7 +449,7 @@ O script em Python 3 [monitor_persistencia.py](https://github.com/orestescaminha
 
 ---
 
-## Leia os Logs
+## 5. Leia os Logs
 
 >_auth, journald, wtmp_
 
@@ -474,7 +477,7 @@ Para elevar esse processo a um nível profissional de resposta a incidentes, a c
 
 O script [coleta_auth.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/coleta_auth.sh) é uma versão melhorada que analisa tentativas de autenticação e eventos de elevação de privilégio, verifica a integridade dos logs binários e exibe logins e falhas recentes.
 
-## Histórico do Shell
+## 6. Histórico do Shell
 
 >_O QUE ELES DIGITARAM_
 

@@ -650,7 +650,7 @@ Fique atento a estas quatro inconsistências clássicas nos atributos MACB (Modi
 
 🔹 **Inconsistência de diretório:** O `mtime` da pasta mãe diverge completamente dos horários dos arquivos contidos nela.
 
-🚫 Erros Críticos
+### 🚫 Erros Comuns a Evitar
 
 🔹 **Evitar/Ignorar o deslocamento (offset) do host**: Misturar registros em hora local com fontes em UTC, quebrando a sequência lógica dos fatos.
 
@@ -659,6 +659,85 @@ Fique atento a estas quatro inconsistências clássicas nos atributos MACB (Modi
 🔹 **Visão limitada ao disco**: Construir a linha do tempo baseando-se apenas no sistema de arquivos, deixando de fora os logs e os artefatos voláteis da memória RAM.
 
 🔹 **Análise de `atime` inválida**: Confiar no horário de acesso (`atime`) em partições montadas com as flags `relatime` ou `noatime`.
+
+---
+
+## 8. Rootkits e Ocultação
+
+>_QUANDO O HOST MENTE_
+
+_Rootkits_ quebram a suposição de que o sistema operacional diz a verdade. Variantes do espaço do usuário substituem binários ou interceptam bibliotecas, módulos do kernel ocultam processos e arquivos completamente, e aqueles baseados em eBPF são cada vez mais comuns. Detecte-os comparando visões independentes.
+Este trecho resume técnicas de evasão de defesa focadas em persistência e ocultação. Ele destaca uma das verdades mais cruas da resposta a incidentes: quando um sistema operacional está comprometido no nível do kernel (ou via eBPF), você não pode confiar nas ferramentas nativas dele.
+
+**_Fluxo de Trabalho_**
+
+```
+SUSPEITE DO SO -> COMPARE AS VISUALIZAÇÕES -> CONFIE NA MEMÓRIA
+```
+
+>**UM OUTPUT LIMPO NÃO PROVA NADA**: se o rootkit interceptar as ferramentas que você está usando, cada comando informará educadamente que está tudo bem.
+
+
+> DETECTE POR DISCORDÂNCIA
+
+```Bash
+ls /proc | grep -E '^[0-9]+$' | sort -n vs ps -e --no-headers # PID visível em um, não no outro
+rpm -Va | grep '^..5' # ou: debsuns -c # binários pertencentes ao pacote modificados
+cat /proc/modules; lsmod; kmod list # comparar todos os três módulos ocultos do kernel
+bpftool prog list; ls /sys/fs/bpf/ # rootkits baseados em eBPF # a variante moderna
+```
+
+Aqui está uma análise detalhada dos comandos e conceitos apresentados acima para ajudar a entender o que está acontecendo nos bastidores:
+
+**Linha 1**: Detectar por Discordância (Processos Ocultos)
+
+O comando `ps` lê as informações do diretório `/proc` para listar os processos. Se um rootkit tradicional do _User Space_ (espaço do usuário) modificar o binário `/bin/ps` para esconder o PID 1337, o comando ps não vai mostrá-lo. No entanto, o diretório /proc/1337 ainda existirá fisicamente no sistema de arquivos virtual.
+Ao listar diretamente o conteúdo de `/proc` (que armazena os PIDs como pastas numéricas) e comparar com a saída do `ps`, qualquer divergência (um PID que aparece em `/proc` mas não no `ps`) indica a presença de um processo oculto.
+
+**Linha 2**: Integridade de Binários (Modificações no Sistema)
+
+Rootkits de espaço de usuário costumam substituir binários críticos do sistema (como `ls`, `ps`, `netstat`, `ss`) por versões maliciosas que filtram os resultados.
+O comando `rpm -Va` verifica todos os arquivos instalados no sistema contra os metadados originais do pacote. O filtro `grep ^..5` busca especificamente por arquivos onde o MD5/SHA256 hash mudou (o 5 na terceira posição indica falha na verificação do hash). O `debsums` faz o mesmo para sistemas baseados em Debian, validando se os binários batem com os pacotes originais de fábrica.
+
+**Linha 3**: Módulos Ocultos do Kernel (LKM Rootkits)
+
+Rootkits baseados em LKM (Loadable Kernel Modules) alteram as estruturas de dados do próprio kernel (como a lista vinculada de módulos).
+O comando lsmod na verdade lê o arquivo `/proc/modules`. Se o rootkit apenas removeu a si mesmo da lista vinculada que o `/proc/modules` lê, ele pode esquecer de alterar outras interfaces ou ferramentas de gerenciamento de hardware mais profundas (como o `kmod`). Comparar diferentes fontes de informação sobre os módulos carregados pode revelar a inconsistência.
+
+**Linha 4**: A Ameaça Moderna: eBPF (Extended Berkeley Packet Filter)
+
+Rootkits baseados em eBPF são extremamente perigosos porque não precisam modificar o código do kernel ou criar módulos tradicionais. Eles anexam programas legítimos a funções do kernel para alterar o comportamento do sistema em tempo real (ex: interceptar chamadas de sistema como `sys_enter_readdir` para esconder arquivos).
+Como eles rodam dentro da máquina virtual eBPF do kernel, ferramentas tradicionais de detecção de rootkits (como `chkrootkit` ou `rkhunter`) falham completamente. A detecção exige inspecionar os programas eBPF carregados usando o `bpftool` ou checar o sistema de arquivos virtual `/sys/fs/bpf/`.
+
+### Indicadores
+
+🔹 Divergência entre as listas de processos de `/proc`, `ps` e da imagem de memória
+
+🔹 Falhas na verificação de pacotes em binários principais como `ps`, `ls`, `netstat`, `ss`
+
+🔹 Módulos do kernel presentes na memória, mas ausentes na saída do `lsmod`
+
+🔹 Programas eBPF inesperados anexados a chamadas de sistema ou ganchos de rede
+
+### Tipos de Rootkits
+
+🔹 **Substituição de binários no espaço do usuário**: detectada pela verificação de pacotes e hashes
+
+🔹 **LD PRELOAD**: gancho de biblioteca: visível em `ld.so.preload` e no ambiente do processo
+
+🔹 **Módulo do kernel**: oculta processos e arquivos, precisa de análise de memória para confirmar
+
+🔹 **Baseado em BPF**: cada vez mais comum, verifique os programas carregados e os anexos
+
+### 🚫 Erros Comuns a Evitar
+
+🔹 Concluir que um host está limpo com base na saída de suas próprias ferramentas
+
+🔹 Não comparar `/proc` com `ps`, a verificação de rootkit mais barata disponível
+
+🔹 Ignorar eBPF, que os rootkits modernos abusam cada vez mais
+
+🔹 Executar scanners de rootkit no host ativo e confiando em um resultado limpo
 
 ---
 

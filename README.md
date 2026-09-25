@@ -691,6 +691,8 @@ SUSPEITE DO SO -> COMPARE AS VISUALIZAÇÕES -> CONFIE NA MEMÓRIA
 
 ### Detectando por Discordância
 
+O fluxo de trabalho dos comandos abaixo foca no princípio fundamental da detecção de *rootkits*: **a busca por anomalias por discordância** (*cross-view analysis*). Comparar a visão bruta do kernel (`/proc` e chamadas de sistema) contra a visão dos utilitários de espaço de usuário (`ps`, `lsmod`) é a forma mais eficaz de expor ganchos (*hooks*) de interceptação.
+
 ```Bash
 ls /proc | grep -E '^[0-9]+$' | sort -n vs ps -e --no-headers # PID visível em um, não no outro
 rpm -Va | grep '^..5' # ou: debsuns -c # binários pertencentes ao pacote modificados

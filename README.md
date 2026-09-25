@@ -695,7 +695,7 @@ O fluxo de trabalho dos comandos abaixo foca no princípio fundamental da detec�
 
 ```Bash
 ls /proc | grep -E '^[0-9]+$' | sort -n vs ps -e --no-headers # PID visível em um, não no outro
-rpm -Va | grep '^..5' # ou: debsuns -c # binários pertencentes ao pacote modificados
+rpm -Va | grep '^..5' # ou: debsums -c # binários pertencentes ao pacote modificados
 cat /proc/modules; lsmod; kmod list # comparar todos os três módulos ocultos do kernel
 bpftool prog list; ls /sys/fs/bpf/ # rootkits baseados em eBPF # a variante moderna
 ```
@@ -721,6 +721,10 @@ O comando lsmod na verdade lê o arquivo `/proc/modules`. Se o rootkit apenas re
 
 Rootkits baseados em eBPF são extremamente perigosos porque não precisam modificar o código do kernel ou criar módulos tradicionais. Eles anexam programas legítimos a funções do kernel para alterar o comportamento do sistema em tempo real (ex: interceptar chamadas de sistema como `sys_enter_readdir` para esconder arquivos).
 Como eles rodam dentro da máquina virtual eBPF do kernel, ferramentas tradicionais de detecção de rootkits (como `chkrootkit` ou `rkhunter`) falham completamente. A detecção exige inspecionar os programas eBPF carregados usando o `bpftool` ou checar o sistema de arquivos virtual `/sys/fs/bpf/`.
+
+### Script Automatizado
+
+O script aprimorado [detect_rootkits.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/detect_rootkits.sh) automatiza todas as verificações por discordância e gera alertas claros caso identifique inconsistências no sistema.
 
 ### Indicadores
 

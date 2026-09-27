@@ -7,7 +7,7 @@ Criei este Guia como uma referência para resposta em tempo real (*live-response
 ```
 Preservar → Coletar → Analisar → Linha do Tempo → Relatar.
 ```
-Esse guia aborda a investigação em 10 etapas:
+Esse guia aborda a investigação em 11 etapas:
 
 🔄 **Os Primeiros Cinco Minutos** — preservar evidências, usar binários confiáveis, gravar sua sessão e evitar reiniciar o sistema antes de coletar evidências voláteis.
 
@@ -21,13 +21,15 @@ Esse guia aborda a investigação em 10 etapas:
 
 📜 **Logs e Histórico do Shell** — correlacionar registros de autenticação, dados do `journal`, registros binários de login, histórico de comandos e lacunas suspeitas, em vez de confiar em uma única fonte.
 
-📈 **Reconstrur a Linha do Tempo** — combinar _timestamps_ MAC (Modificação, Acesso, Criação/Alteração) do sistema de arquivos com logs e outras evidências para determinar o que aconteceu e quando.
+📈 **Reconstruir a Linha do Tempo** — combinar _timestamps_ MAC (Modificação, Acesso, Criação/Alteração) do sistema de arquivos com logs e outras evidências para determinar o que aconteceu e quando.
 
 🕵️‍♂️ **Buscar por Rootkits** — comparar diferentes visões do sistema em vez de confiar cegamente em utilitários executados em um host potencialmente comprometido.
 
 📦 **Containers e Nuvem** — investigar tanto o host quanto o plano de controle, preservando camadas graváveis ou snapshots antes que evidências efêmeras desapareçam.
 
 🗜️ **Análise de Exfiltração** — correlacionar artefatos de preparação (*staging*), arquivos compactados, tráfego de saída, histórico do shell e atividade na nuvem, distinguindo roubo de dados confirmado de provável.
+
+👷‍♂️ **Restaurar o Sistema** — Reconstruir o sistema restaurando os dados, rotacionando as credenciais e fechando o vetor de entrada antes que o sistema retorne ao serviço.
 
 ---
 
@@ -955,7 +957,7 @@ sudo ./trace_exfiltration.sh "2026-09-01"
 
 ---
 
-## 11. Reconstrua, Não Limpe
+## 11. Restaurar o Sistema
 
 >_ERRADICAÇÃO E RECUPERAÇÃO_
 
@@ -994,7 +996,6 @@ NÃO LIMPE -> RECONSTRUA -> ROTACIONE TUDO
 
 ---
 
-
 ## 🛠️ Ferramentas
 
 * **ss/lsof**: Ferramentas para listar conexões de rede ativas (ss) e arquivos ou portas abertos por processos (lsof).
@@ -1030,8 +1031,6 @@ NÃO LIMPE -> RECONSTRUA -> ROTACIONE TUDO
 * **sha256sum**: Utilitário para calcular e verificar hashes SHA-256, garantindo a integridade e autenticidade de arquivos e evidências.
 
 
-
-
 ## 🗺️ Mapeamento do Framework MITRE ATT&CK
 
 >_Táticas utilizadas e combatidas neste cenário estão catalogadas oficialmente_
@@ -1039,22 +1038,39 @@ NÃO LIMPE -> RECONSTRUA -> ROTACIONE TUDO
 Esse guia é fundamentado em uma compilação do [MITRE ATT&CK®](https://attack.mitre.org/), uma base de conhecimento acessível globalmente sobre táticas e técnicas de adversários, fundamentada em observações do mundo real que serve de alicerce para o desenvolvimento de modelos de ameaças e metodologias específicos nos setores privado e governamental, bem como na área de cibersegurança.
 
 * **T1014 (Rootkit)**: Modificação do sistema operacional ou do kernel para ocultar a presença de processos, arquivos ou conexões maliciosas.
+
 * **T1048 (Exfiltration Over Alternative Protocol)**: Exfiltração na qual adversários enviam dados roubados por meio de um protocolo diferente de seu canal principal de comando e controle, às vezes para um destino separado.
+
 * **T1055 (Process Injection)** *(corrigido de T1O55)*: Injeção de código malicioso dentro do espaço de memória de processos legítimos para ocultar a execução e burlar defesas.
+
 * **T1059.004 (Unix Shell)**: Execução de comandos e scripts maliciosos utilizando shells nativos de sistemas Unix-like (como `bash`, `sh` ou `zsh`).
+
 * **T1070.003 (Clear Command History)**: Exclusão ou manipulação do histórico do terminal/shell (ex.: `.bash_history`) para apagar rastros de comandos executados.
+
 * **T1070.006 (Timestomp)**: Alteração deliberada dos atributos de data e hora de arquivos para enganar análises e investigações forenses.
+
 * **T1071 (Application Layer Protocol)**: Uso de protocolos comuns da camada de aplicação (HTTP/S, DNS, SMTP) para disfarçar o tráfego de Comando e Controle (C2).
+
 * **T1090 (Proxy)**: Roteamento de tráfego malicioso através de servidores proxy internos ou externos para mascarar a origem real do invasor.
+
 * **T1547.006 (Kernel Modules and Extensions)**: Carregamento de módulos do kernel (LKMs) para manter acesso persistente ou elevar privilégios no sistema.
+
 * **T1552.003 (Bash History)**: Vasculhamento de arquivos de histórico do shell em busca de senhas ou credenciais salvas em texto puro.
+
 * **T1552.005 (Cloud Credentials nos metadados)**: Monitoramento do `/proc`.
+
 * **T1560 (Archive Collected Data)**: Coleta na qual adversários comprimem e/ou criptografam dados antes da exfiltração.
+
 * **T1564 (Hide Artifacts)**: Ocultação de arquivos, diretórios, atributos ou processos para evitar a detecção por usuários ou ferramentas de segurança.
+
 * **T1567 (Exfiltration Over Web Service)**: Exfiltração na qual adversários utilizam um serviço web externo legítimo para transferir dados roubados, em vez de — ou além de — seu canal principal de comando e controle.
+
 * **T1571 (Non-Standard Port)**: Comunicação através de portas de rede não padrão para ignorar filtros de firewall ou regras de inspeção de tráfego.
+
 * **T1610 (Deploy Container)**: Execução para plataformas de contêineres. Descreve adversários implantando um contêiner para executar processos maliciosos, burlar defesas do host ou obter acesso a recursos que, normalmente, o contêiner não deveria alcançar.
+
 * **T1611 (Escape para o Host)**: Escalonamento de privilégios onde um adversário escapa de um contêiner ou ambiente virtualizado para acessar o host subjacente.
+
 * **T1620 (Reflective Code Loading)**: Carregamento e execução de código executável diretamente na memória sem antes gravá-lo no disco rígido.
 
 ## 📐 Normas Técnicas
@@ -1066,3 +1082,16 @@ Esse guia também segue as Recomendações da RFC e do NIST para Técnicas Foren
 * **NIST SP 800-61**: Recomendações e considerações sobre resposta a incidentes para a gestão de riscos de cibersegurança:
 
 * **NIST SP 800-86**: Guia para a Integração de Técnicas Forenses na Resposta a Incidentes
+
+---
+
+## Safety
+
+
+## Credits
+
+**Orestes Caminha**.
+
+## License
+
+MIT.

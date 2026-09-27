@@ -857,6 +857,110 @@ O utilitário nativo `nsenter` permite que você "entre" nas namespaces (rede, p
 
 ## 10. Análise de Exfiltração
 
-[Editando]
+>_AVALIE O DANO_
+
+Essa fase de análise de impacto e exfiltração de dados após uma invasão cibernética tem como foco central descobrir quais informações foram roubadas (o que saiu do perímetro) e como o atacante se organizou para isso.
+
+Depois de estabelecer como eles entraram, a pergunta que realmente importa para todos é o que saiu da estação. Procure por artefatos de preparação, criação de arquivos e volume de saída e seja preciso no relatório sobre o que você pode e não pode provar.
+
+**_Fluxo de Trabalho_**
+
+```
+O QUE ELES LERAM -> O QUE ELES PREPARARAM -> O QUE SAIU
+```
+
+🔹 **O que eles leram**: Identificar quais arquivos sensíveis foram acessados ou abertos pelos invasores.
+
+🔹 **O que eles prepararam**: Localizar pastas onde o invasor reuniu e compactou os dados antes de enviá-los para fora.
+
+🔹 **O que saiu**: Determinar o volume exato e o destino dos dados roubados.
+
+>❗ Ausência não é prova: Se você não encontrou rastros de roubo de dados, não significa que o roubo não aconteceu. Significa apenas que o invasor pode ter apagado os rastros ou usado um método indetectável. Seu relatório deve ser honesto sobre essa limitação.
+
+### COLETA DE RASTREAMENTO E EXFILTRAÇÃO
+
+O fluxo de trabalho do script abaixo aborda o ciclo de vida do encadeamento de **preparação (*staging*)**, **pesquisa de ferramentas de exfiltração** e **análise de volume/tráfego de rede**.
+
+```Bash
+find /tmp/dev/shm /var/tmp -type f -newerct '<início do incidente>' # diretórios de preparação
+grep -E 'tar |zip |7z |rclone|curl -T|scp ' ~/.bash_history # comandos de transferência de arquivos
+ausearch -k file_access -ts recent # se o auditd estava configurado # quem leu o quê
+correlate proxy/NetFlow por host para a janela # a questão do volume
+```
+
+💻 Ferramentas e Comandos
+
+A Bash executa comandos práticos de Linux que analistas de segurança usam para rastrear as ações do hacker:
+
+🔹 `find`: Busca arquivos criados ou modificados temporariamente após o início do incidente em diretórios comuns de descarte (/tmp, /dev/shm).
+
+🔹 `grep -E`: Procura por ferramentas de compactação (tar, zip, 7z) ou de transferência de arquivos (rclone, curl, scp) no histórico de comandos (.bash_history).
+
+🔹 `ausearch`: Consulta os logs do sistema operacional (se o auditd estiver ativo) para ver exatamente quem acessou quais arquivos.
+
+🔹 `NetFlow/Proxy`: Analisa os logs de rede para checar se houve picos anômalos de envio de dados (bytes) saindo da máquina invadida na janela de tempo do ataque.
+
+### Script Automatizado
+
+O script [trace_exfiltration.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/trace_exfiltration.sh) realiza uma auditoria forense para detectar possível exfiltração de dados, examinando diretórios de *staging*, verificando o histórico de comandos em busca de comandos de transferência, consultando logs de auditoria `auditd` para identificar eventos de acesso a arquivos e analisando *sockets* de rede quanto a volumes elevados de transmissão de dados com aprimoramento técnico, em relação à Bash acima, nos seguintes pontos:
+
+🔹 1. **Expansão dos Locais de Preparação (*Staging*):**
+Além de `/tmp`, `/dev/shm` e `/var/tmp`, atacantes utilizam frequentemente o diretório `/tmp/.X11-unix`, pastas oculta em `/var/tmp/`, o diretório temporário do usuário (`~/.cache`) e subdiretórios em `/dev/mqueue` ou `/run/user/<UID>`.
+
+🔹 2. **Ampliação do Escopo de Ferramentas de Exfiltração:**
+O `grep` precisa contemplar utlitários modernos e living-off-the-land (LotL) muito usados para exfiltração, como `rsync`, `nc`/`netcat`, `ncat`, `socat`, `wget --post-file`, `python -m http.server`, `aws s3`, `mega-cmd` e transferências via `DNS` ou `ICMP`.
+
+🔹 3. **Leitura e Tratamento do `ausearch` (Auditd):**
+Se o `auditd` estiver ativo, a busca crua com `ausearch -k file_access` pode gerar volumes gigantescos de dados. O uso do `aureport -f -i` ou `ausearch` direcionado ao período específico (`-ts` com data exata) com agrupamento reduz os falsos positivos.
+
+🔹 4. **Verificação de Exfiltração Ativa via Sockets (`/proc` e `ss`):**
+Em investigações ao vivo, é crucial checar conexões de rede ativas com alto volume de tráfego (bytes enviados/recebidos) diretamente na tabela de sockets do kernel ou via `ss -i`, capturando transferências que estejam acontecendo **no exato momento da auditoria**.
+
+#### **Como Executar o Script**
+
+Passe a data inicial da janela do incidente como argumento ao executar o script:
+
+```bash
+sudo ./trace_exfiltration.sh "2026-09-01"
+
+```
+
+### Evidência de Exfiltração
+
+🔹 Arquivos compactados criados em diretórios de preparação durante a janela do incidente
+
+🔹 Ferramentas de transferência no histórico, cron ou processos em execução (rclone, scp, curl)
+
+🔹 Anomalias de volume de bytes de saída na telemetria de rede para esse host
+
+🔹 Destinos de armazenamento em nuvem ou sites de compartilhamento de texto em logs de DNS e proxy
+
+### Relate com Honestidade
+
+🔹 **Extração confirmada**: artefato mais evidência de transferência na rede
+
+🔹 **Provável**: arquivo de preparação criado, capacidade de transferência presente, sem dados de volume
+
+🔹 **Possível**: acesso ocorreu, nenhuma evidência de preparação ou transferência encontrada
+
+🔹 **Telemetria insuficiente**: declare isso claramente em vez de insinuar segurança
+
+## 🚫 Erros Comuns a Evitar
+
+🔹 A Relatar 'nenhuma evidência de exfiltração' como se significasse que nenhuma ocorreu
+
+🔹 A Não verificar diretórios com suporte em memória, como /dev/shm, para preparação
+
+🔹 Ignorar a possibilidade de exfiltração lenta e de baixo volume ao longo de semanas
+
+🔹 Não relatar as lacunas de telemetria que limitaram a conclusão
+
+⚠️ 3. Erros Graves a Evitar
+
+🔹 **Confundir ausência de prova com prova de ausência**: Dizer "não há evidências de exfiltração" não significa que ela não aconteceu. Significa apenas que você não encontrou ou não tem logs para provar.
+
+🔹 **Ignorar a memória**: Esquecer de checar diretórios mapeados em memória RAM (como /dev/shm no Linux), muito usados por atacantes para não deixar rastros no disco rígido.
+
+🔹 **Focar apenas em picos de tráfego**: Ignorar táticas de exfiltração lenta (low and slow), onde dados são extraídos em pequenos volumes ao longo de semanas para burlar alarmes.
 
 ---

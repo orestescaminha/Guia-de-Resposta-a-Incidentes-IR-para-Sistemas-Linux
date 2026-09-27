@@ -775,7 +775,83 @@ Para que o relatório unificado seja gerado automaticamente de forma diária e s
 
 ## 9. Containers e Nuvem
 
-[Editando]
+>_EVIDÊNCIA EFÊMERA_
+
+Em arquiteturas tradicionais, o perito forense isola a máquina e analisa o disco. No mundo dos contêineres e do Kubernetes, se você demorar para agir, o orquestrador simplesmente destrói e recria o _Pod_, apagando todas as evidências.
+
+Os contêineres invertem as suposições forenses usuais: o sistema de arquivos é efêmero, o processo é visível do host e a evidência pode ser excluída por um agendador antes da sua chegada. Trabalhe a partir do host e do plano de controle e capture antes que qualquer coisa reinicie.
+
+**_Fluxo de Trabalho_**
+
+```
+O HOST VÊ TUDO -> CAPTURE A CAMADA -> FAÇA UM SNAPSHOT DA VM
+```
+
+> O CONTÊINER PODE TER SUMIDO: um orquestrador pode reagendar um _Pod_ comprometido em segundos, levando todos os artefatos locais com ele.
+
+📑 Resumo do Fluxo de Trabalho para Coleta de Evidências
+
+A principal conclusão para o tratamento de incidentes em ambientes de nuvem e containers é investigar os containers a partir do host e do plano de controle, capturando a camada gravável antes que o agendador a remova, além de criar snapshots de volumes na nuvem sem encerrar as instâncias.
+
+🔹 1. VISÃO DO HOST: Mapeia o processo no host para os limites e arquivo de raiz do container
+
+🔹 2. ISOLAMENTO DO POD NO KUBERNETES (Sem deixar o agendador destruí-lo)
+
+🔹 3. EXTRAÇÃO DA CAMADA GRAVÁVEL (WRITABLE LAYER)
+
+🔹 4. CAPTURA DE VOLUMES PERSISTENTES NA NUVEM (AWS/GCP/Azure)
+
+### Coleta de Evidências
+
+Abaixo, uma bash para produção em Kubernetes e ambientes de nuvem modernos:
+
+```bash
+ps -eo pid,ppid,cgroup,cmd | grep <PID> # Localiza o PID no host (o host enxerga todos os containers)
+cat /proc/<PID>/cgroup                  # Exibe as cgroups para extrair o ID exato do container
+ls -l /proc/<PID>/root                  # Acessa o sistema de arquivos isolado do container via host
+kubectl label pod <NOME_DO_POD> app- # Remove a label que o conecta ao Service (desconecta da rede/ingress)
+kubectl get pod <NOME_DO_POD> -o yaml > pod_comprometido.yaml # Salva a especificação atual para auditoria
+# Opção A: Em ambientes legados com Docker
+docker pause <ID_CONTAINER> && docker commit <ID_CONTAINER> evidencia_imagem:v1
+# Opção B: Em ambientes modernos com containerd/CRI-O (Sem Docker)
+# Copia o diretório 'upperdir' do OverlayFS no nó sem alterar o container ou usar o kubectl cp
+tar -czf camada_gravavel.tar.gz -C $(grep -oP 'upperdir=\K[^,]+' /proc/<PID>/mountinfo) .
+# Cria um snapshot do disco do nó diretamente na API da nuvem (sem derrubar o nó nem parar a instância)
+aws ec2 create-snapshot --volume-id vol-0123456789abcdef0 --description "Snapshot forense do no K8s"
+
+```
+
+#### Script Automatizado de Triagem Forense em Containers (Host-Level)
+
+O script [container_triage.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/container_triage.sh) realiza a triagem forense de contêineres em nível de host, extraindo informações relevantes, como mapeamentos de cgroup, identificação do runtime, mapeamento do PID, congelamento do container e captura da camada de escrita e conexões de rede preservando os metadados. 
+
+>❗ Esse script deve ser executado no **Host (Nó trabalhador)** onde o container suspeito está rodando.
+
+### Pontos de Atenção
+
+🔹 1. **Adequação ao Runtime Moderno (Fim do Docker no K8s):**
+
+O Kubernetes depreciou o *dockershim*. Ambientes modernos usam **containerd** ou **CRI-O**. É necessário usar o `crictl` para inspecionar e extrair dados diretamente do sistema de arquivos de sobreposição (*OverlayFS*) em `/var/lib/containerd/`.
+
+🔹 2. **Congelamento (Pause) Antes da Captura:**
+
+Tentar extrair um container em execução pode corromper a evidência devido a gravações simultâneas. Utilize o recurso de congelamento de cgroups (`crictl exec ... pause` ou congelamento no host) para pausar o processo malicioso sem encerrá-lo antes de copiar a camada gravável.
+
+🔹 3. **Quarentena no Kubernetes (Vencendo o Agendador):**
+A técnica correta para "vencer o agendador" (evitar o *eviction*) é **remover as Labels** do Pod que o conectam ao ReplicaSet/Service (isolando-o da rede) e aplicar um **Taint/Cordon** no nó. O Pod continuará vivo para análise, mas fora de produção.
+
+🔹 4. **Análise de Namespaces via `nsenter`:**
+O utilitário nativo `nsenter` permite que você "entre" nas namespaces (rede, processos, montagem) do atacante de forma furtiva a partir do host, sem usar os binários do próprio container (que podem estar infectados com *rootkits*).
+
+🚫 Erros Comuns a Evitar
+
+🔹 Tentar investigar o incidente de dentro do próprio contêiner comprometido usando seus próprios recursos.
+
+🔹 Matar ou excluir o contêiner antes de conseguir capturar sua camada gravável.
+
+🔹 Encerrar uma instância na nuvem para "contê-la", resultando na perda irreversível dos dados do disco.
+
+🔹 Ignorar os logs de auditoria do plano de controle, que geralmente sobrevivem quando o host é destruído.
 
 ---
 

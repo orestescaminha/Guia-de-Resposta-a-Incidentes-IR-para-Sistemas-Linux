@@ -190,7 +190,7 @@ Para cada alerta encontrado, a ferramenta exibe:
 
 ### **Script Automatizado
 
-O script [ram_acquisition_and_analysis.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/ram_acquisition_and_analysis.sh) automatiza o fluxo de aquisição e validação local (com opção para envio via rede) e organiza a execução dos plugins do Volatility 3 em arquivos de relatórios separados.
+O script [ram_acquisition_and_analysis.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/ram_acquisition_and_analysis.sh) realiza a aquisição de memória RAM e executa uma análise offline utilizando o Volatility 3. Ele suporta modos local e de rede para a aquisição da memória e gera um hash SHA-256 para validação de integridade.
 
 ### 🚫 Erros Comuns a Evitar
 

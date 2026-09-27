@@ -188,9 +188,29 @@ Para cada alerta encontrado, a ferramenta exibe:
 
 * **Desmontagem (Assembly/Disassembly)**: As primeiras instruções em linguagem assembly encontradas naquela área (ex.: chamadas de sistema, *NOP sleds*, etc.).
 
-### **Script Automatizado
+### Script Automatizado
 
 O script [ram_acquisition_and_analysis.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/ram_acquisition_and_analysis.sh) realiza a aquisição de memória RAM e executa uma análise offline utilizando o Volatility 3. Ele suporta modos local e de rede para a aquisição da memória e gera um hash SHA-256 para validação de integridade.
+
+#### Como Executar
+
+1. **Para aquisição local padrão via AVML:**
+```bash
+sudo ./ram_acquisition_and_analysis.sh local
+
+```
+
+2. **Para transmissão via rede com LiME:**
+🔹 Na máquina do perito/servidor receptor:
+```bash
+nc -l -p 4444 > /caminho/evidencia/mem.lime
+
+```
+🔹 Na máquina investigada:
+```bash
+sudo ./ram_acquisition_and_analysis.sh network
+
+```
 
 ### 🚫 Erros Comuns a Evitar
 

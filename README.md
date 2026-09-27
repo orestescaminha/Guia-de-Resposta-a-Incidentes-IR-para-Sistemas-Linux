@@ -188,6 +188,10 @@ Para cada alerta encontrado, a ferramenta exibe:
 
 * **Desmontagem (Assembly/Disassembly)**: As primeiras instruções em linguagem assembly encontradas naquela área (ex.: chamadas de sistema, *NOP sleds*, etc.).
 
+### **Script Automatizado
+
+O script [ram_acquisition_and_analysis.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/ram_acquisition_and_analysis.sh) automatiza o fluxo de aquisição e validação local (com opção para envio via rede) e organiza a execução dos plugins do Volatility 3 em arquivos de relatórios separados.
+
 ### 🚫 Erros Comuns a Evitar
 
 🔹 **Negligência**: Ignorar a coleta de memória achando que a imagem de disco é suficiente.

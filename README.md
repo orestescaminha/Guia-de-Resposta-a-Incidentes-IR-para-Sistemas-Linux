@@ -947,16 +947,6 @@ sudo ./trace_exfiltration.sh "2026-09-01"
 
 ## 🚫 Erros Comuns a Evitar
 
-🔹 A Relatar 'nenhuma evidência de exfiltração' como se significasse que nenhuma ocorreu
-
-🔹 A Não verificar diretórios com suporte em memória, como /dev/shm, para preparação
-
-🔹 Ignorar a possibilidade de exfiltração lenta e de baixo volume ao longo de semanas
-
-🔹 Não relatar as lacunas de telemetria que limitaram a conclusão
-
-⚠️ 3. Erros Graves a Evitar
-
 🔹 **Confundir ausência de prova com prova de ausência**: Dizer "não há evidências de exfiltração" não significa que ela não aconteceu. Significa apenas que você não encontrou ou não tem logs para provar.
 
 🔹 **Ignorar a memória**: Esquecer de checar diretórios mapeados em memória RAM (como /dev/shm no Linux), muito usados por atacantes para não deixar rastros no disco rígido.
@@ -964,3 +954,115 @@ sudo ./trace_exfiltration.sh "2026-09-01"
 🔹 **Focar apenas em picos de tráfego**: Ignorar táticas de exfiltração lenta (low and slow), onde dados são extraídos em pequenos volumes ao longo de semanas para burlar alarmes.
 
 ---
+
+## 11. Reconstrua, Não Limpe
+
+>_ERRADICAÇÃO E RECUPERAÇÃO_
+
+Uma vez que um invasor tenha acesso root, remover o que você encontrou não é erradicação. Reconstrua a partir de imagens conhecidas e íntegras, restaure os dados seletivamente após a inspeção, rotacione todas as credenciais que acessaram o host e feche o vetor de entrada antes que o sistema retorne ao serviço.
+
+**_Fluxo de Trabalho_**
+
+```
+NÃO LIMPE -> RECONSTRUA -> ROTACIONE TUDO
+```
+
+>❗ UMA LIMPEZA DEIXA FOOTHOLDS: você não pode provar que um host está limpo após o comprometimento do root. Você só pode provar que um host reconstruído começou limpo.
+
+### Erradique Corretamente
+
+📋 **Lista de Verificação de Recuperação**
+
+🔹 **Reconstrução completa**: Reconstrua o host a partir de uma imagem confiável em vez de limpar no local.
+
+🔹 **Rotação de credenciais**: Rotacione todas as credenciais, chaves e tokens que o host poderia ter acessado.
+
+🔹 **Inspeção de segurança**: Inspecione os backups em busca da persistência encontrada antes de restaurar qualquer coisa.
+
+🔹 **Corrija primeiro** o vetor de acesso inicial e, em seguida, retorne o serviço à produção
+
+
+🚫 Erros Comuns a Evitar
+
+🔹 **Limpar em vez de reconstruir**: Limpar um host comprometido com acesso root e retorná-lo ao serviço.
+
+🔹 **Restauração contaminada**: Restaurar a configuração e os binários de um backup dentro da janela de comprometimento.
+
+🔹 **Negligência com chaves**: Ignorar a rotação de credenciais porque o roubo de chaves não foi visualizado.
+
+🔹 **Retorno precipitado**: Trazer o host de volta antes que o vetor de entrada seja realmente corrigido.
+
+---
+
+
+## 🛠️ Ferramentas
+
+* **ss/lsof**: Ferramentas para listar conexões de rede ativas (ss) e arquivos ou portas abertos por processos (lsof).
+
+* **SIEM**: Plataforma centralizada que coleta, correlaciona e analisa eventos e logs de segurança em tempo real.
+
+* **AVHL/LIME**: Módulos de kernel para captura e extração da memória RAM (live memory dump) em sistemas Linux.
+
+* **YARA**: Ferramenta de identificação e classificação de malware baseada em regras e padrões de texto ou binários.
+
+* **EDR**: Solução de segurança instalada no endpoint para monitoramento contínuo, detecção e resposta a ameaças avançadas.
+
+* **Volatility 3**: Framework avançado para análise forense offline de imagens de memória RAM (memory forensics).
+
+* **auditd**: Serviço nativo do Linux para auditoria de eventos do kernel, registrando acessos a arquivos e execução de comandos.
+
+* **journalctl**: Utilitário de linha de comando para consultar e analisar os logs gerenciados pelo serviço systemd-journald.
+
+* **UAC/CyLR**: Ferramentas de resposta a incidentes voltadas para a coleta rápida de evidências e artefatos do sistema (triage).
+
+* **Sleuth Kit**: Conjunto de ferramentas de linha de comando para análise profunda de sistemas de arquivos e volumes de disco.
+
+* **Plaso/log2timeline**: Ferramenta para extração de eventos de diversas fontes de dados e criação de linhas do tempo (timelines) forenses.
+
+* **chkrootkit/rkhunter**: Utilitários para varredura e detecção de rootkits, backdoors e alterações suspeitas em arquivos do sistema.
+
+* **rpm -Vc/debsums**: Comandos para verificar a integridade dos arquivos instalados contra os hashes originais dos pacotes da distribuição.
+
+* **eBPF/Falco**: Tecnologia de monitoramento do kernel (eBPF) e ferramenta de segurança (Falco) para detecção de anomalias em tempo de execução.
+
+* **`/proc`**: Pseudo-sistema de arquivos que fornece uma interface direta para consultar dados de processos e parâmetros do kernel em execução.
+
+* **sha256sum**: Utilitário para calcular e verificar hashes SHA-256, garantindo a integridade e autenticidade de arquivos e evidências.
+
+
+
+
+## 🗺️ Mapeamento do Framework MITRE ATT&CK
+
+>_Táticas utilizadas e combatidas neste cenário estão catalogadas oficialmente_
+
+Esse guia é fundamentado em uma compilação do [MITRE ATT&CK®](https://attack.mitre.org/), uma base de conhecimento acessível globalmente sobre táticas e técnicas de adversários, fundamentada em observações do mundo real que serve de alicerce para o desenvolvimento de modelos de ameaças e metodologias específicos nos setores privado e governamental, bem como na área de cibersegurança.
+
+* **T1014 (Rootkit)**: Modificação do sistema operacional ou do kernel para ocultar a presença de processos, arquivos ou conexões maliciosas.
+* **T1048 (Exfiltration Over Alternative Protocol)**: Exfiltração na qual adversários enviam dados roubados por meio de um protocolo diferente de seu canal principal de comando e controle, às vezes para um destino separado.
+* **T1055 (Process Injection)** *(corrigido de T1O55)*: Injeção de código malicioso dentro do espaço de memória de processos legítimos para ocultar a execução e burlar defesas.
+* **T1059.004 (Unix Shell)**: Execução de comandos e scripts maliciosos utilizando shells nativos de sistemas Unix-like (como `bash`, `sh` ou `zsh`).
+* **T1070.003 (Clear Command History)**: Exclusão ou manipulação do histórico do terminal/shell (ex.: `.bash_history`) para apagar rastros de comandos executados.
+* **T1070.006 (Timestomp)**: Alteração deliberada dos atributos de data e hora de arquivos para enganar análises e investigações forenses.
+* **T1071 (Application Layer Protocol)**: Uso de protocolos comuns da camada de aplicação (HTTP/S, DNS, SMTP) para disfarçar o tráfego de Comando e Controle (C2).
+* **T1090 (Proxy)**: Roteamento de tráfego malicioso através de servidores proxy internos ou externos para mascarar a origem real do invasor.
+* **T1547.006 (Kernel Modules and Extensions)**: Carregamento de módulos do kernel (LKMs) para manter acesso persistente ou elevar privilégios no sistema.
+* **T1552.003 (Bash History)**: Vasculhamento de arquivos de histórico do shell em busca de senhas ou credenciais salvas em texto puro.
+* **T1552.005 (Cloud Credentials nos metadados)**: Monitoramento do `/proc`.
+* **T1560 (Archive Collected Data)**: Coleta na qual adversários comprimem e/ou criptografam dados antes da exfiltração.
+* **T1564 (Hide Artifacts)**: Ocultação de arquivos, diretórios, atributos ou processos para evitar a detecção por usuários ou ferramentas de segurança.
+* **T1567 (Exfiltration Over Web Service)**: Exfiltração na qual adversários utilizam um serviço web externo legítimo para transferir dados roubados, em vez de — ou além de — seu canal principal de comando e controle.
+* **T1571 (Non-Standard Port)**: Comunicação através de portas de rede não padrão para ignorar filtros de firewall ou regras de inspeção de tráfego.
+* **T1610 (Deploy Container)**: Execução para plataformas de contêineres. Descreve adversários implantando um contêiner para executar processos maliciosos, burlar defesas do host ou obter acesso a recursos que, normalmente, o contêiner não deveria alcançar.
+* **T1611 (Escape para o Host)**: Escalonamento de privilégios onde um adversário escapa de um contêiner ou ambiente virtualizado para acessar o host subjacente.
+* **T1620 (Reflective Code Loading)**: Carregamento e execução de código executável diretamente na memória sem antes gravá-lo no disco rígido.
+
+## 📐 Normas Técnicas
+
+Esse guia também segue as Recomendações da RFC e do NIST para Técnicas Forenses na Resposta a Incidentes
+
+* **RFC 3227**: Diretrizes para Coleta e Arquivamento de Evidências
+
+* **NIST SP 800-61**: Recomendações e considerações sobre resposta a incidentes para a gestão de riscos de cibersegurança:
+
+* **NIST SP 800-86**: Guia para a Integração de Técnicas Forenses na Resposta a Incidentes

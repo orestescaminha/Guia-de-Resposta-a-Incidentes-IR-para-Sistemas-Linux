@@ -722,9 +722,24 @@ O comando lsmod na verdade lê o arquivo `/proc/modules`. Se o rootkit apenas re
 Rootkits baseados em eBPF são extremamente perigosos porque não precisam modificar o código do kernel ou criar módulos tradicionais. Eles anexam programas legítimos a funções do kernel para alterar o comportamento do sistema em tempo real (ex: interceptar chamadas de sistema como `sys_enter_readdir` para esconder arquivos).
 Como eles rodam dentro da máquina virtual eBPF do kernel, ferramentas tradicionais de detecção de rootkits (como `chkrootkit` ou `rkhunter`) falham completamente. A detecção exige inspecionar os programas eBPF carregados usando o `bpftool` ou checar o sistema de arquivos virtual `/sys/fs/bpf/`.
 
-### Script Automatizado
+### Scripts para Automações
 
-O script aprimorado [detect_rootkits.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/detect_rootkits.sh) automatiza a detecção de rootkits verificando a integridade dos binários do sistema, processos e módulos do kernel (por discordância) e gera alertas claros caso identifique inconsistências no sistema
+#### Automação Básica
+
+O script aprimorado [detect_rootkits.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/detect_rootkits.sh) automatiza todas as verificações por discordância e gera alertas claros caso identifique inconsistências no sistema.
+
+#### Automação por _cross-view analysis_
+
+Para integrar e automatizar o **chkrootkit** e o **rkhunter** junto às verificações por discordância (cross-view analysis) em um relatório único e estruturado, a melhor estratégia é através do script [unified_rootkit_audit.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/unified_rootkit_audit.sh) em Bash que orquestra a execução das ferramentas, padroniza as saídas e gera um relatório consolidado com marcação de data/hora (UTC) para fins de auditoria forense.
+
+#### Automação Periódica via Cron
+
+Para que o relatório unificado seja gerado automaticamente de forma diária e salve o histórico em `/var/log/`, adicione a seguinte entrada na tabela de tarefas do `cron`:
+
+```Bash
+# Executa todos os dias às 03:00 AM em UTC
+0 3 * * * root /caminho/para/unified_rootkit_audit.sh > /dev/null 2>&1
+```
 
 ### Indicadores
 

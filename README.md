@@ -195,18 +195,23 @@ O script [ram_acquisition_and_analysis.sh](https://github.com/orestescaminha/Gui
 #### Como Executar
 
 1. **Para aquisição local padrão via AVML:**
+
 ```bash
 sudo ./ram_acquisition_and_analysis.sh local
 
 ```
 
 2. **Para transmissão via rede com LiME:**
+
 🔹 Na máquina do perito/servidor receptor:
+
 ```bash
 nc -l -p 4444 > /caminho/evidencia/mem.lime
 
 ```
+
 🔹 Na máquina investigada:
+
 ```bash
 sudo ./ram_acquisition_and_analysis.sh network
 

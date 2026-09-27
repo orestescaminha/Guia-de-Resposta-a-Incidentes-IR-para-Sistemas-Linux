@@ -242,6 +242,7 @@ LEIA /proc -> ENCONTRE BINS EXCLUÍDOS -> PERCORRA A ÁRVORE
 > `ps` PODE ESTAR MENTINDO: Um rootkit de espaço do usuário substitui `ps` e `ls`. O diretório `/proc` do kernel é muito mais difícil de falsificar de forma convincente.
 
 ### Enumerar a Partir do KERNEL
+O procedimento via `/proc` é um dos pilares mais eficientes do *Live Response* em Linux, pois acessa a visão direta do kernel sem depender de utilitários de terceiros.
 O trecho de código abaixo descreve um procedimento clássico de investigação e análise de processos via `/proc` em um sistema Linux comprometido, focado em identificar executáveis ocultos/excluídos do disco e extrair evidências em tempo real.
 
 ```Bash
@@ -253,7 +254,26 @@ cp /proc/<PID>/exe /path/to/evidence/recovered_binary.bin # Copia o executável 
 ```
 >_Mesmo se o invasor tiver deletado o binário do disco rígido, a imagem do executável permanece acessível através do ponteiro `/proc/<PID>/exe`. Esse código recupera a evidência intacta para posterior engenharia reversa ou submissão ao VirusTotal/YARA._
 
-#### O que verificar em `/proc/[PID]/`
+### Script Automatizado
+
+Fazer a busca manual (por exemplo: `ls -al /proc/*/exe` e copiar/colar o `<PID>` manualmente) atrasa a resposta. O script deve capturar automaticamente todos os PIDs que apontam para links com o sufixo `(deleted)` e iterar sobre eles de forma em lote, inspecionar o arquivo `/proc/<PID>/environ`, fazer o dump do mapa de memória (`/proc/<PID>/maps` + `/proc/<PID>/mem`) e calcular e salvar o hash SHA-256 no mesmo instante para manter a integridade e garantir a cadeia de custódia da evidência.
+O script [proc_process_investigator.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/proc_process_investigator.sh) identifica automaticamente todos os processos rodando a partir de binários deletados do disco, recupera os arquivos executáveis, extrai os metadados de execução (`cmdline`, `environ`, `fd`, `cwd`) e calcula os hashes de integridade.
+
+#### Como Executar*
+
+1. Salve o script e conceda permissões de execução:
+
+```bash
+chmod +x proc_process_investigator.sh
+```
+
+2. Execute com privilégios de `root` para garantir o acesso a processos de outros usuários:
+
+```bash
+sudo ./proc_process_investigator.sh
+```
+
+### O que verificar em `/proc/[PID]/`
 
 🔹 `/proc/[PID]/exe`: Mostra o link simbólico para o caminho executável real. Se o binário foi apagado do disco pelo atacante enquanto ainda executava, ele exibirá o sufixo (deleted). Você pode copiar esse arquivo para recuperar o binário original
 

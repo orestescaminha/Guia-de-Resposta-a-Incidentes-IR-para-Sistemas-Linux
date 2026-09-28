@@ -327,7 +327,7 @@ LISTAR SOCKETS -> MAPEAMENTO PARA PROCESSO -> VERIFICAR O PAR
 
 🔹 Cache ARP, tabela de roteamento e quaisquer interfaces de túnel inesperadas
 
-### Capturar Comexões e Proprietários
+### Capturar Conexões e Proprietários
 
 As conexões de rede são efêmeras e os sockets fecham rápido, o que exige rapidez do analista para capturar a evidência antes que ela desapareça.
 O trecho de código baixo reúne comandos essenciais para auditoria e investigação de rede em tempo real em um servidor Linux. O objetivo é mapear conexões ativas, relacioná-las a processos, verificar a tabela bruta do kernel, checar o estado das interfaces física/virtuais e inspecionar as regras do firewall.
@@ -351,6 +351,20 @@ iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de fir
 | **Filtragem de Tráfego** | `iptables-save` / `nft` | Redirecionamentos, NATs e exceções no firewall. |
 
 >_Os IPs e portas de `/proc/net/tcp` estão em hexadecimal e podem ser convertidos para formato legível_
+
+### Script Automatizado
+
+O conjunto de comandos acima é a base perfeita para a investigação de rede ao vivo (*Live Network Response*), combinando a perspectiva do espaço de usuário (`ss`, `lsof`), do kernel (`/proc/net/tcp*`), do nível de enlace (`ip`) e da camada de filtragem (`iptables`/`nftables`).
+Porém, com alguns pontos de aprimoramento para elevar a precisão e a automação dessa análise, o script [network_triage.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/network_triage.sh) automatiza a coleta de sockets de rede, converte as entradas brutas do kernel para formato legível, detecta interfaces promíscuas, verifica o estado do firewall e calcula os hashes de integridade de todos os relatórios gerados.
+
+#### Como Executar*
+
+Dê permissão de execução e execute com privilégios de `root`:
+
+```bash
+chmod +x network_triage.sh
+sudo ./network_triage.sh
+```
 
 ### Sinais de Alerta
 

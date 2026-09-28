@@ -1,0 +1,6 @@
+# Dependências Python do repositório
+# O guia e os scripts deste projeto são baseados principalmente em ferramentas do sistema
+# operacional (BusyBox, LiME, AVML, Volatility, Sleuth Kit, Plaso, auditd etc.),
+# e os scripts Python presentes usam apenas a biblioteca padrão do Python 3.
+#
+# Nenhuma dependência externa é necessária para instalar com pip.

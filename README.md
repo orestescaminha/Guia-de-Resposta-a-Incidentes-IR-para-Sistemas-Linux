@@ -357,7 +357,7 @@ iptables-save; nft list ruleset # Despejam na tela todas as regras ativas de fir
 O conjunto de comandos acima é a base perfeita para a investigação de rede ao vivo (*Live Network Response*), combinando a perspectiva do espaço de usuário (`ss`, `lsof`), do kernel (`/proc/net/tcp*`), do nível de enlace (`ip`) e da camada de filtragem (`iptables`/`nftables`).
 Porém, com alguns pontos de aprimoramento para elevar a precisão e a automação dessa análise, o script [network_triage.sh](https://github.com/orestescaminha/Guia-de-Resposta-a-Incidentes-IR-para-Sistemas-Linux/blob/main/scripts/network_triage.sh) automatiza a coleta de sockets de rede, converte as entradas brutas do kernel para formato legível, detecta interfaces promíscuas, verifica o estado do firewall e calcula os hashes de integridade de todos os relatórios gerados.
 
-#### Como Executar*
+#### Como Executar
 
 Dê permissão de execução e execute com privilégios de `root`:
 
